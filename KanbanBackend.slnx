@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KanbanBackend.API/KanbanBackend.API.csproj" />
+    <Project Path="src/KanbanBackend.Tests/KanbanBackend.Tests.csproj" />
+  </Folder>
+</Solution>
