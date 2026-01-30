@@ -23,6 +23,7 @@ public class KanbanTests
             .AddProjections()
             .AddFiltering()
             .AddSorting()
+            .AddErrorFilter<KanbanBackend.API.GraphQL.GraphQLErrorFilter>()
             .BuildRequestExecutorAsync();
     } // Removed GetInMemoryContext helper as we will do it inline or via options helper
 
@@ -158,7 +159,8 @@ public class KanbanTests
             EnsureSuccess(result);
         });
         
-        Assert.Contains("Column not found", error.Message);
+        Assert.Contains("Entity 'Column'", error.Message);
+        Assert.Contains("not found", error.Message);
     }
 
     // D) Isolation Test (Multi-Board)

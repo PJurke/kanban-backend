@@ -2,6 +2,7 @@ using HotChocolate;
 using KanbanBackend.API.Data;
 using KanbanBackend.API.Models;
 using KanbanBackend.API.GraphQL.Inputs;
+using KanbanBackend.API.Exceptions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,7 +38,7 @@ public class Mutation
 
         if (!await context.Boards.AnyAsync(b => b.Id == input.BoardId))
         {
-            throw new GraphQLException("Board not found");
+            throw new EntityNotFoundException("Board", input.BoardId);
         }
 
         var column = new Column
@@ -63,7 +64,7 @@ public class Mutation
 
         if (!await context.Columns.AnyAsync(c => c.Id == input.ColumnId))
         {
-            throw new GraphQLException("Column not found");
+            throw new EntityNotFoundException("Column", input.ColumnId);
         }
 
         var card = new Card

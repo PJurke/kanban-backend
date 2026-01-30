@@ -1,5 +1,6 @@
 using FluentValidation;
 using KanbanBackend.API.Data;
+using KanbanBackend.API.GraphQL;
 using KanbanBackend.API.GraphQL.Queries;
 using KanbanBackend.API.GraphQL.Mutations;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +34,8 @@ builder.Services
     .AddMutationType<Mutation>()
     .AddProjections()
     .AddFiltering()
-    .AddSorting();
+    .AddSorting()
+    .AddErrorFilter<GraphQLErrorFilter>();
 
 var app = builder.Build();
 
