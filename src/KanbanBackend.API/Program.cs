@@ -1,3 +1,4 @@
+using FluentValidation;
 using KanbanBackend.API.Data;
 using KanbanBackend.API.GraphQL.Queries;
 using KanbanBackend.API.GraphQL.Mutations;
@@ -9,6 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+builder.Services.AddValidatorsFromAssemblyContaining<Program>(); // Register all validators
 
 builder.Services.AddCors(options =>
 {

@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="HotChocolate.Data" Version="15.1.12" />
     <PackageReference Include="HotChocolate.Data.EntityFramework" Version="15.1.12" />
     <PackageReference Include="HotChocolate.Execution" Version="15.1.12" />

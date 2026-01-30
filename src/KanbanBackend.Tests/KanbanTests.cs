@@ -1,3 +1,4 @@
+using FluentValidation;
 using HotChocolate;
 using HotChocolate.Execution;
 using KanbanBackend.API.Data;
@@ -15,6 +16,7 @@ public class KanbanTests
     {
         return await new ServiceCollection()
             .AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(dbName))
+            .AddValidatorsFromAssemblyContaining<KanbanBackend.API.GraphQL.Validators.AddBoardInputValidator>()
             .AddGraphQL()
             .AddQueryType<Query>()
             .AddMutationType<Mutation>()
@@ -47,7 +49,7 @@ public class KanbanTests
         // Act - 1. Add Board
         var boardResult = await executor.ExecuteAsync(@"
             mutation {
-                addBoard(name: ""Test Board"") {
+                addBoard(input: { name: ""Test Board"" }) {
                     id
                 }
             }");
@@ -60,7 +62,7 @@ public class KanbanTests
         // Act - 2. Add Column
         var columnResult = await executor.ExecuteAsync($@"
             mutation {{
-                addColumn(boardId: ""{boardId}"", name: ""To Do"", order: 1) {{
+                addColumn(input: {{ boardId: ""{boardId}"", name: ""To Do"", order: 1 }}) {{
                     id
                 }}
             }}");
@@ -73,7 +75,7 @@ public class KanbanTests
         // Act - 3. Add Card
         var cardResult = await executor.ExecuteAsync($@"
             mutation {{
-                addCard(columnId: ""{columnId}"", name: ""Task 1"", rank: 1.0) {{
+                addCard(input: {{ columnId: ""{columnId}"", name: ""Task 1"", rank: 1.0 }}) {{
                     id
                     name
                 }}
@@ -95,17 +97,17 @@ public class KanbanTests
         var executor = await GetExecutorAsync(dbName);
 
         // Setup Data
-        await executor.ExecuteAsync("mutation { addBoard(name: \"Root\") { id } }"); // Just to have initial state if needed, but we capture IDs below
+        await executor.ExecuteAsync("mutation { addBoard(input: { name: \"Root\" }) { id } }"); // Just to have initial state if needed, but we capture IDs below
         
-        var r1 = await executor.ExecuteAsync("mutation { addBoard(name: \"B1\") { id } }");
+        var r1 = await executor.ExecuteAsync("mutation { addBoard(input: { name: \"B1\" }) { id } }");
         var bIdDict = (IReadOnlyDictionary<string, object>)EnsureSuccess(r1).Data!["addBoard"]!;
         var bId = bIdDict["id"];
 
-        var r2 = await executor.ExecuteAsync($"mutation {{ addColumn(boardId: \"{bId}\", name: \"C1\", order: 1) {{ id }} }}");
+        var r2 = await executor.ExecuteAsync($"mutation {{ addColumn(input: {{ boardId: \"{bId}\", name: \"C1\", order: 1 }}) {{ id }} }}");
         var cIdDict = (IReadOnlyDictionary<string, object>)EnsureSuccess(r2).Data!["addColumn"]!;
         var cId = cIdDict["id"];
 
-        await executor.ExecuteAsync($"mutation {{ addCard(columnId: \"{cId}\", name: \"Card1\", rank: 5.5) {{ id }} }}");
+        await executor.ExecuteAsync($"mutation {{ addCard(input: {{ columnId: \"{cId}\", name: \"Card1\", rank: 5.5 }}) {{ id }} }}");
 
         // Act - Query Deep
         var query = @"
@@ -149,7 +151,7 @@ public class KanbanTests
         {
              var result = await executor.ExecuteAsync($@"
             mutation {{
-                addCard(columnId: ""{randomId}"", name: ""Ghost Card"", rank: 1.0) {{
+                addCard(input: {{ columnId: ""{randomId}"", name: ""Ghost Card"", rank: 1.0 }}) {{
                     id
                 }}
             }}");
@@ -168,13 +170,13 @@ public class KanbanTests
         var executor = await GetExecutorAsync(dbName);
 
         // Board A
-        var rb1 = await executor.ExecuteAsync("mutation { addBoard(name: \"Board A\") { id } }");
+        var rb1 = await executor.ExecuteAsync("mutation { addBoard(input: { name: \"Board A\" }) { id } }");
         var idADict = (IReadOnlyDictionary<string, object>)EnsureSuccess(rb1).Data!["addBoard"]!;
         var idA = idADict["id"];
-        await executor.ExecuteAsync($"mutation {{ addColumn(boardId: \"{idA}\", name: \"Col A\", order: 1) {{ id }} }}");
+        await executor.ExecuteAsync($"mutation {{ addColumn(input: {{ boardId: \"{idA}\", name: \"Col A\", order: 1 }}) {{ id }} }}");
 
         // Board B
-        var rb2 = await executor.ExecuteAsync("mutation { addBoard(name: \"Board B\") { id } }");
+        var rb2 = await executor.ExecuteAsync("mutation { addBoard(input: { name: \"Board B\" }) { id } }");
         var idBDict = (IReadOnlyDictionary<string, object>)EnsureSuccess(rb2).Data!["addBoard"]!;
         var idB = idBDict["id"];
         // Board B is empty
@@ -202,14 +204,14 @@ public class KanbanTests
         var dbName = Guid.NewGuid().ToString();
         var executor = await GetExecutorAsync(dbName);
 
-        var rb = await executor.ExecuteAsync("mutation { addBoard(name: \"Sort Board\") { id } }");
+        var rb = await executor.ExecuteAsync("mutation { addBoard(input: { name: \"Sort Board\" }) { id } }");
         var bIdDict = (IReadOnlyDictionary<string, object>)EnsureSuccess(rb).Data!["addBoard"]!;
         var bId = bIdDict["id"];
 
         // Add Columns in random order: 3, 1, 2
-        await executor.ExecuteAsync($"mutation {{ addColumn(boardId: \"{bId}\", name: \"Three\", order: 3) {{ id }} }}");
-        await executor.ExecuteAsync($"mutation {{ addColumn(boardId: \"{bId}\", name: \"One\", order: 1) {{ id }} }}");
-        await executor.ExecuteAsync($"mutation {{ addColumn(boardId: \"{bId}\", name: \"Two\", order: 2) {{ id }} }}");
+        await executor.ExecuteAsync($"mutation {{ addColumn(input: {{ boardId: \"{bId}\", name: \"Three\", order: 3 }}) {{ id }} }}");
+        await executor.ExecuteAsync($"mutation {{ addColumn(input: {{ boardId: \"{bId}\", name: \"One\", order: 1 }}) {{ id }} }}");
+        await executor.ExecuteAsync($"mutation {{ addColumn(input: {{ boardId: \"{bId}\", name: \"Two\", order: 2 }}) {{ id }} }}");
 
         // Act - Query with sort
         // Note: Sort syntax depends on HotChocolate Filtering/Sorting package. Usually `order: { order: ASC }`

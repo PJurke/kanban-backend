@@ -1,6 +1,8 @@
 using HotChocolate;
 using KanbanBackend.API.Data;
 using KanbanBackend.API.Models;
+using KanbanBackend.API.GraphQL.Inputs;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 namespace KanbanBackend.API.GraphQL.Mutations;
@@ -8,13 +10,16 @@ namespace KanbanBackend.API.GraphQL.Mutations;
 public class Mutation
 {
     public async Task<Board> AddBoard(
-        string name,
-        [Service] AppDbContext context)
+        AddBoardInput input,
+        [Service] AppDbContext context,
+        [Service] IValidator<AddBoardInput> validator)
     {
+        validator.ValidateAndThrow(input);
+
         var board = new Board
         {
             Id = Guid.NewGuid(),
-            Name = name
+            Name = input.Name
         };
 
         context.Boards.Add(board);
@@ -24,12 +29,13 @@ public class Mutation
     }
 
     public async Task<Column> AddColumn(
-        Guid boardId,
-        string name,
-        int order,
-        [Service] AppDbContext context)
+        AddColumnInput input,
+        [Service] AppDbContext context,
+        [Service] IValidator<AddColumnInput> validator)
     {
-        if (!await context.Boards.AnyAsync(b => b.Id == boardId))
+        validator.ValidateAndThrow(input);
+
+        if (!await context.Boards.AnyAsync(b => b.Id == input.BoardId))
         {
             throw new GraphQLException("Board not found");
         }
@@ -37,9 +43,9 @@ public class Mutation
         var column = new Column
         {
             Id = Guid.NewGuid(),
-            BoardId = boardId,
-            Name = name,
-            Order = order
+            BoardId = input.BoardId,
+            Name = input.Name,
+            Order = input.Order
         };
 
         context.Columns.Add(column);
@@ -49,12 +55,13 @@ public class Mutation
     }
 
     public async Task<Card> AddCard(
-        Guid columnId,
-        string name,
-        double rank,
-        [Service] AppDbContext context)
+        AddCardInput input,
+        [Service] AppDbContext context,
+        [Service] IValidator<AddCardInput> validator)
     {
-        if (!await context.Columns.AnyAsync(c => c.Id == columnId))
+        validator.ValidateAndThrow(input);
+
+        if (!await context.Columns.AnyAsync(c => c.Id == input.ColumnId))
         {
             throw new GraphQLException("Column not found");
         }
@@ -62,9 +69,9 @@ public class Mutation
         var card = new Card
         {
             Id = Guid.NewGuid(),
-            ColumnId = columnId,
-            Name = name,
-            Rank = rank
+            ColumnId = input.ColumnId,
+            Name = input.Name,
+            Rank = input.Rank
         };
 
         context.Cards.Add(card);
