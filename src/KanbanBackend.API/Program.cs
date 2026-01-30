@@ -8,6 +8,19 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigins", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+              .WithMethods("POST") // GraphQL only needs POST
+              .WithHeaders("Content-Type", "Authorization")
+              .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
+    });
+});
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=kanban.db"));
 
@@ -27,6 +40,8 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     context.Database.EnsureCreated();
 }
+
+app.UseCors("AllowSpecificOrigins");
 
 app.MapGraphQL();
 
