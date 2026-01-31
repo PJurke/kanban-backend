@@ -22,6 +22,9 @@ public class AppDbContext : IdentityDbContext<AppUser>
             .WithOne(c => c.Board)
             .HasForeignKey(c => c.BoardId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        // Multi-Tenancy Index
+        modelBuilder.Entity<Board>().HasIndex(b => b.OwnerId);
             
         modelBuilder.Entity<Column>()
             .HasMany(c => c.Cards)

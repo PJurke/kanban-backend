@@ -6,21 +6,33 @@ using KanbanBackend.API.Exceptions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
+using HotChocolate.Authorization;
+using System.Security.Claims;
+
 namespace KanbanBackend.API.GraphQL.Mutations;
 
+[Authorize]
 public class Mutation
 {
     public async Task<Board> AddBoard(
         AddBoardInput input,
         [Service] AppDbContext context,
-        [Service] IValidator<AddBoardInput> validator)
+        [Service] IValidator<AddBoardInput> validator,
+        [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
         validator.ValidateAndThrow(input);
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+             throw new GraphQLException(new Error("User ID not found in token", "AUTH_INVALID_TOKEN"));
+        }
 
         var board = new Board
         {
             Id = Guid.NewGuid(),
-            Name = input.Name
+            Name = input.Name,
+            OwnerId = userId
         };
 
         context.Boards.Add(board);
