@@ -69,6 +69,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<KanbanBackend.API.Services.AuthService>();
+builder.Services.AddHostedService<KanbanBackend.API.Services.TokenCleanupService>(); // Daily cleanup
 
 builder.Services
     .AddGraphQLServer()
