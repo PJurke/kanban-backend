@@ -1,5 +1,6 @@
 using HotChocolate;
 using HotChocolate.Types;
+using HotChocolate.Authorization;
 using KanbanBackend.API.Models;
 using KanbanBackend.API.Services;
 using Microsoft.AspNetCore.Http;
@@ -11,6 +12,7 @@ namespace KanbanBackend.API.GraphQL.Mutations;
 [ExtendObjectType("Mutation")]
 public class AuthMutations
 {
+    [AllowAnonymous]
     public async Task<UserPayload> RegisterAsync(
         string email,
         string password,
@@ -30,6 +32,7 @@ public class AuthMutations
         return new UserPayload(email);
     }
 
+    [AllowAnonymous]
     public async Task<AuthPayload> LoginAsync(
         string email,
         string password,
@@ -51,6 +54,7 @@ public class AuthMutations
         return new AuthPayload(result.AccessToken, new UserPayload(email));
     }
 
+    [AllowAnonymous]
     public async Task<AuthPayload> RefreshTokenAsync(
         [Service] AuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,

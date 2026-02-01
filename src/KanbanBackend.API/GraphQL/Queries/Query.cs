@@ -10,9 +10,9 @@ using HotChocolate.Types.Pagination;
 
 namespace KanbanBackend.API.GraphQL.Queries;
 
-[Authorize]
 public class Query
 {
+    [Authorize]
     [UseOffsetPaging(IncludeTotalCount = true)]
     [UseProjection]
     [UseFiltering]

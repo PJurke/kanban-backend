@@ -11,9 +11,9 @@ using System.Security.Claims;
 
 namespace KanbanBackend.API.GraphQL.Mutations;
 
-[Authorize]
 public class Mutation
 {
+    [Authorize]
     public async Task<Board> AddBoard(
         AddBoardInput input,
         [Service] AppDbContext context,
@@ -41,6 +41,7 @@ public class Mutation
         return board;
     }
 
+    [Authorize]
     public async Task<Column> AddColumn(
         AddColumnInput input,
         [Service] AppDbContext context,
@@ -67,6 +68,7 @@ public class Mutation
         return column;
     }
 
+    [Authorize]
     public async Task<Card> AddCard(
         AddCardInput input,
         [Service] AppDbContext context,
