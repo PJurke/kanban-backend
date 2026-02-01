@@ -1,12 +1,12 @@
-using HotChocolate;
-using KanbanBackend.API.Data;
-using KanbanBackend.API.Models;
-using KanbanBackend.API.GraphQL.Inputs;
-using KanbanBackend.API.Exceptions;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
-
+using HotChocolate;
 using HotChocolate.Authorization;
+using KanbanBackend.API.Data;
+using KanbanBackend.API.Exceptions;
+using KanbanBackend.API.GraphQL.Inputs;
+using KanbanBackend.API.Models;
+using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace KanbanBackend.API.GraphQL.Mutations;
@@ -22,7 +22,7 @@ public class Mutation
     {
         validator.ValidateAndThrow(input);
 
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
         if (string.IsNullOrEmpty(userId))
         {
              throw new GraphQLException(new Error("User ID not found in token", "AUTH_INVALID_TOKEN"));

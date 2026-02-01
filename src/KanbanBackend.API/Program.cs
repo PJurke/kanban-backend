@@ -14,6 +14,9 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Disable legacy claim mapping (SOAP-style)
+System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
 // Serilog Configuration
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
@@ -75,8 +78,9 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = "kanban-backend",
         ValidAudience = "kanban-client",
         IssuerSigningKey = key,
-        ClockSkew = TimeSpan.Zero // Strict expiry
+        ClockSkew = TimeSpan.Zero
     };
+    options.MapInboundClaims = false; // Disable default claim mapping
 });
 
 builder.Services.AddAuthorization();

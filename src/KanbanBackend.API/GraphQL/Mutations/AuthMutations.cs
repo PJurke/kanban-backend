@@ -6,6 +6,7 @@ using KanbanBackend.API.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory; // Extension methods for GetOrCreate
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace KanbanBackend.API.GraphQL.Mutations;
 
@@ -124,7 +125,7 @@ public class AuthMutations
         [Service] IHttpContextAccessor httpContextAccessor,
         [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
         if (string.IsNullOrEmpty(userId))
         {
              throw new GraphQLException(new Error("Unauthorized", "AUTH_REQUIRED"));
