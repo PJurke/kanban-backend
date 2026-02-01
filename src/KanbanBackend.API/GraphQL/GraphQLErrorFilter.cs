@@ -1,12 +1,26 @@
 using FluentValidation;
+using HotChocolate;
 using KanbanBackend.API.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace KanbanBackend.API.GraphQL;
 
 public class GraphQLErrorFilter : IErrorFilter
 {
+    private readonly ILogger<GraphQLErrorFilter> _logger;
+    
+    public GraphQLErrorFilter(ILogger<GraphQLErrorFilter> logger) // Added this constructor
+    {
+        _logger = logger;
+    }
+
     public IError OnError(IError error)
     {
+        if (error.Exception != null) // Added this block for logging
+        {
+             _logger.LogError(error.Exception, "GraphQL Error: {Message}", error.Exception.Message);
+        }
+
         if (error.Exception is EntityNotFoundException)
         {
             return error.WithCode("NOT_FOUND")

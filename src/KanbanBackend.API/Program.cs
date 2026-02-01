@@ -1,17 +1,25 @@
 using FluentValidation;
+using HotChocolate.Authorization;
+using HotChocolate.Data;
+using HotChocolate.Validation;
 using KanbanBackend.API.Data;
 using KanbanBackend.API.GraphQL;
-using KanbanBackend.API.GraphQL.Queries;
 using KanbanBackend.API.GraphQL.Mutations;
+using KanbanBackend.API.GraphQL.Queries;
 using KanbanBackend.API.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using HotChocolate.Data;
-using HotChocolate.Validation;
-using HotChocolate.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Serilog Configuration
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()); // Structured Logging to Console
 
 // Add services to the container.
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
@@ -95,6 +103,7 @@ using (var scope = app.Services.CreateScope())
     context.Database.Migrate();
 }
 
+app.UseSerilogRequestLogging(); // Log HTTP requests
 app.UseCors("AllowSpecificOrigins");
 
 app.UseAuthentication();

@@ -3,8 +3,8 @@ using KanbanBackend.API.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
-// Add other usings as needed
 
 namespace KanbanBackend.API.Services;
 
@@ -14,17 +14,20 @@ public class AuthService
     private readonly SignInManager<AppUser> _signInManager;
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         AppDbContext context,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger<AuthService> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _context = context;
         _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task<IdentityResult> RegisterAsync(string email, string password)
@@ -35,12 +38,22 @@ public class AuthService
 
     public async Task<AuthResult?> LoginAsync(string email, string password)
     {
+        _logger.LogInformation("Attempting login for user: {Email}", email);
         var user = await _userManager.FindByEmailAsync(email);
-        if (user == null) return null;
+        if (user == null) 
+        {
+            _logger.LogWarning("Login failed for user: {Email}. Reason: UserNotFound", email);
+            return null;
+        }
 
         var result = await _signInManager.CheckPasswordSignInAsync(user, password, true); // lockoutOnFailure: true
-        if (!result.Succeeded) return null;
+        if (!result.Succeeded) 
+        {
+            _logger.LogWarning("Login failed for user: {Email}. Reason: InvalidPassword or Lockout. IsLockedOut: {IsLockedOut}", email, result.IsLockedOut);
+            return null;
+        }
 
+        _logger.LogInformation("User {Email} logged in successfully.", email);
         return await GenerateAuthResultAsync(user);
     }
 
@@ -55,13 +68,14 @@ public class AuthService
 
         if (existingToken == null)
         {
-            // Token likely forged or already cleaned up
+            _logger.LogWarning("Refresh failed. Token not found or invalid format.");
             return null; 
         }
 
         // Reuse Detection: If token is revoked but used again -> Security Alert!
         if (existingToken.IsRevoked)
         {
+            _logger.LogCritical("SECURITY EVENT: Token Reuse Detected! User: {UserId}, FamilyId: {FamilyId}. Revoking all tokens.", existingToken.UserId, existingToken.Id);
             // REVOKE ALL TOKENS FOR THIS USER (Family revoke)
             await RevokeAllUserTokensAsync(existingToken.UserId);
             return null; // or throw SecurityException
@@ -69,10 +83,12 @@ public class AuthService
 
         if (existingToken.IsExpired)
         {
+             _logger.LogInformation("Refresh failed. Token expired. User: {UserId}", existingToken.UserId);
             return null; // Just expired, clean login needed
         }
 
         // Rotation: Revoke used token, create new one
+        _logger.LogInformation("Token rotated successfully for user: {UserId}", existingToken.UserId);
         return await RotateRefreshTokenAsync(existingToken);
     }
 
