@@ -26,6 +26,7 @@ var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get
 if (allowedOrigins == null || allowedOrigins.Length == 0)
     allowedOrigins = new[] { "http://localhost:3000" };
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>(); // Register all validators
 
 builder.Services.AddCors(options =>
