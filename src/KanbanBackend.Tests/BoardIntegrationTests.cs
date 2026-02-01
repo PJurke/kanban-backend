@@ -8,12 +8,14 @@ using KanbanBackend.API.Models;
 
 namespace KanbanBackend.Tests;
 
-public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private readonly WebApplicationFactory<Program> _factory;
+    private readonly string _dbFileName;
 
     public BoardIntegrationTests(WebApplicationFactory<Program> factory)
     {
+        _dbFileName = $"test_{Guid.NewGuid()}.db";
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((context, config) =>
@@ -21,10 +23,25 @@ public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     { "Auth:JwtSecret", "SuperSecretKeyForTesting1234567890!@" }, 
-                    { "ConnectionStrings:DefaultConnection", "DataSource=:memory:" }
+                    { "ConnectionStrings:DefaultConnection", $"Data Source={_dbFileName}" } 
                 });
             });
         });
+    }
+
+    public void Dispose()
+    {
+        if (File.Exists(_dbFileName))
+        {
+            try
+            {
+                File.Delete(_dbFileName);
+            }
+            catch
+            {
+                // Ignored to prevent test failures during cleanup
+            }
+        }
     }
 
     private async Task<(HttpClient Client, string UserId, string Email)> CreateAuthenticatedClientAsync()

@@ -46,7 +46,15 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddMemoryCache();
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=kanban.db"));
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    }
+
+    options.UseSqlite(connectionString);
+});
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
