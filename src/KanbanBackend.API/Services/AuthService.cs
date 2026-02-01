@@ -147,6 +147,30 @@ public class AuthService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<IdentityResult> DeleteAccountAsync(string userId, string password)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
+
+        // 1. Verify Password
+        if (!await _userManager.CheckPasswordAsync(user, password))
+        {
+             return IdentityResult.Failed(new IdentityError { Description = "Invalid password" });
+        }
+
+        // 2. Delete User's Boards (Manual Cascadation)
+        // Since there is no FK constraint, we must delete them explicitly.
+        // EF Core 7+ ExecuteDeleteAsync is efficient here.
+        await _context.Boards
+            .Where(b => b.OwnerId == userId)
+            .ExecuteDeleteAsync();
+
+        // 3. Delete User (Identity)
+        // This fails if there are other FK constraints (like RefreshTokens). 
+        // But RefreshToken is configured with ON DELETE CASCADE in AppDbContext, so this is safe.
+        return await _userManager.DeleteAsync(user);
+    }
+
     private string GenerateJwtToken(AppUser user)
     {
         var secret = _configuration["Auth:JwtSecret"];

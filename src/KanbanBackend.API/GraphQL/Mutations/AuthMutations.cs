@@ -117,6 +117,31 @@ public class AuthMutations
         return true;
     }
 
+    [Authorize]
+    public async Task<bool> DeleteAccountAsync(
+        string password,
+        [Service] AuthService authService,
+        [Service] IHttpContextAccessor httpContextAccessor,
+        [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
+    {
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+             throw new GraphQLException(new Error("Unauthorized", "AUTH_REQUIRED"));
+        }
+
+        var result = await authService.DeleteAccountAsync(userId, password);
+        if (!result.Succeeded)
+        {
+             throw new GraphQLException(result.Errors.Select(e => new Error(e.Description, "AUTH_DELETE_FAILED")).ToArray());
+        }
+
+        // Cleanup Cookie
+        httpContextAccessor.HttpContext!.Response.Cookies.Delete("refreshToken");
+
+        return true;
+    }
+
     private void SetRefreshTokenCookie(HttpContext context, string token, DateTimeOffset expires)
     {
         var cookieOptions = new CookieOptions
