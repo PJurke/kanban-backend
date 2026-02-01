@@ -202,4 +202,75 @@ public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program
         var loginBody = await loginRes.Content.ReadAsStringAsync();
         Assert.Contains("AUTH_FAILED", loginBody); // Should fail
     }
+
+    [Fact]
+    public async Task AddColumn_FailsForNonOwner_ReturnsEntityNotFound()
+    {
+        // Assemble
+        var (clientA, _, _) = await CreateAuthenticatedClientAsync();
+        var (clientB, _, _) = await CreateAuthenticatedClientAsync();
+
+        // User A creates board
+        var createBoardRes = await clientA.PostAsJsonAsync("/graphql", new { query = @"mutation { addBoard(input: { name: ""My Board"" }) { id } }" });
+        createBoardRes.EnsureSuccessStatusCode();
+        var bodyA = await createBoardRes.Content.ReadAsStringAsync();
+        var jsonA = JsonNode.Parse(bodyA);
+        var boardId = jsonA?["data"]?["addBoard"]?["id"]?.GetValue<string>();
+
+        // Act - User B tries to add column
+        var mutation = new
+        {
+            query = $@"
+                mutation {{
+                    addColumn(input: {{ boardId: ""{boardId}"", name: ""Hacked Column"", order: 0 }}) {{
+                        id
+                    }}
+                }}"
+        };
+        var response = await clientB.PostAsJsonAsync("/graphql", mutation);
+        var body = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Contains("errors", body.ToLower());
+        Assert.DoesNotContain("Hacked Column", body);
+    }
+
+    [Fact]
+    public async Task AddCard_FailsForNonOwner_ReturnsEntityNotFound()
+    {
+        // Assemble
+        var (clientA, _, _) = await CreateAuthenticatedClientAsync();
+        var (clientB, _, _) = await CreateAuthenticatedClientAsync();
+
+        // User A creates board
+        var createBoardRes = await clientA.PostAsJsonAsync("/graphql", new { query = @"mutation { addBoard(input: { name: ""My Board"" }) { id } }" });
+        var bodyA = await createBoardRes.Content.ReadAsStringAsync();
+        var jsonA = JsonNode.Parse(bodyA);
+        var boardId = jsonA?["data"]?["addBoard"]?["id"]?.GetValue<string>();
+
+        // User A creates column
+        var createColRes = await clientA.PostAsJsonAsync("/graphql", new { 
+            query = $@"mutation {{ addColumn(input: {{ boardId: ""{boardId}"", name: ""Backlog"", order: 0 }}) {{ id }} }}" 
+        });
+        var bodyCol = await createColRes.Content.ReadAsStringAsync();
+        var jsonCol = JsonNode.Parse(bodyCol);
+        var columnId = jsonCol?["data"]?["addColumn"]?["id"]?.GetValue<string>();
+
+        // Act - User B tries to add card
+        var mutation = new
+        {
+            query = $@"
+                mutation {{
+                    addCard(input: {{ columnId: ""{columnId}"", name: ""Hacked Card"", rank: ""0|h:"" }}) {{
+                        id
+                    }}
+                }}"
+        };
+        var response = await clientB.PostAsJsonAsync("/graphql", mutation);
+        var body = await response.Content.ReadAsStringAsync();
+
+        // Assert
+        Assert.Contains("errors", body.ToLower());
+        Assert.DoesNotContain("Hacked Card", body);
+    }
 }

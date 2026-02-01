@@ -45,11 +45,13 @@ public class Mutation
     public async Task<Column> AddColumn(
         AddColumnInput input,
         [Service] AppDbContext context,
-        [Service] IValidator<AddColumnInput> validator)
+        [Service] IValidator<AddColumnInput> validator,
+        [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
         validator.ValidateAndThrow(input);
 
-        if (!await context.Boards.AnyAsync(b => b.Id == input.BoardId))
+        var userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!await context.Boards.AnyAsync(b => b.Id == input.BoardId && b.OwnerId == userId))
         {
             throw new EntityNotFoundException("Board", input.BoardId);
         }
@@ -72,11 +74,13 @@ public class Mutation
     public async Task<Card> AddCard(
         AddCardInput input,
         [Service] AppDbContext context,
-        [Service] IValidator<AddCardInput> validator)
+        [Service] IValidator<AddCardInput> validator,
+        [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
         validator.ValidateAndThrow(input);
 
-        if (!await context.Columns.AnyAsync(c => c.Id == input.ColumnId))
+        var userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (!await context.Columns.AnyAsync(c => c.Id == input.ColumnId && c.Board.OwnerId == userId))
         {
             throw new EntityNotFoundException("Column", input.ColumnId);
         }
