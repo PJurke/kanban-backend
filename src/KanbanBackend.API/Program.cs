@@ -82,6 +82,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<KanbanBackend.API.Services.AuthService>();
 builder.Services.AddHostedService<KanbanBackend.API.Services.TokenCleanupService>(); // Daily cleanup
 
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>();
+
 builder.Services
     .AddGraphQLServer()
     .AddQueryType<Query>()
@@ -108,6 +111,8 @@ app.UseCors("AllowSpecificOrigins");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHealthChecks("/health");
 
 app.MapGraphQL();
 
