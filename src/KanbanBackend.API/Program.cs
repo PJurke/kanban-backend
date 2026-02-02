@@ -102,6 +102,7 @@ builder.Services
     .AddGraphQLServer()
     .AddQueryType<Query>()
     .AddMutationType<Mutation>()
+    .AddSubscriptionType<KanbanBackend.API.GraphQL.Subscriptions.Subscription>()
     .AddTypeExtension<KanbanBackend.API.GraphQL.Mutations.AuthMutations>()
     .AddProjections()
     .AddFiltering()
@@ -128,6 +129,7 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 
+app.UseWebSockets();
 app.MapGraphQL();
 
 app.Run();
