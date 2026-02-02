@@ -108,7 +108,8 @@ builder.Services
     .AddSorting()
     .AddErrorFilter<GraphQLErrorFilter>()
     .AddMaxExecutionDepthRule(8) 
-    .AddAuthorization(); // Enable @authorize directive
+    .AddAuthorization()
+    .AddInMemorySubscriptions(); // Enable Subscriptions & Event Sender
 
 var app = builder.Build();
 
