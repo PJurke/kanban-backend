@@ -1,81 +1,15 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json.Nodes; 
-using Microsoft.Extensions.Configuration;
+using System.Text.Json.Nodes;
+using KanbanBackend.Tests.Builders;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
-using KanbanBackend.API.Models; 
 
 namespace KanbanBackend.Tests;
 
-public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
+public class BoardIntegrationTests : IntegrationTestBase
 {
-    private readonly WebApplicationFactory<Program> _factory;
-    private readonly string _dbFileName;
-
-    public BoardIntegrationTests(WebApplicationFactory<Program> factory)
+    public BoardIntegrationTests(WebApplicationFactory<Program> factory) : base(factory)
     {
-        _dbFileName = $"test_{Guid.NewGuid()}.db";
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureAppConfiguration((context, config) =>
-            {
-                config.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    { "Auth:JwtSecret", "SuperSecretKeyForTesting1234567890!@" }, 
-                    { "ConnectionStrings:DefaultConnection", $"Data Source={_dbFileName}" } 
-                });
-            });
-        });
-    }
-
-    public void Dispose()
-    {
-        if (File.Exists(_dbFileName))
-        {
-            try
-            {
-                File.Delete(_dbFileName);
-            }
-            catch
-            {
-                // Ignored to prevent test failures during cleanup
-            }
-        }
-    }
-
-    private async Task<(HttpClient Client, string UserId, string Email)> CreateAuthenticatedClientAsync()
-    {
-        var client = _factory.CreateClient();
-        var email = $"user_{Guid.NewGuid()}@example.com";
-        var password = "Password123!";
-
-        // Register
-        await client.PostAsJsonAsync("/graphql", new
-        {
-            query = $@"mutation {{ register(email: ""{email}"", password: ""{password}"") {{ email }} }}"
-        });
-
-        // Login
-        var loginRes = await client.PostAsJsonAsync("/graphql", new
-        {
-            query = $@"mutation {{ login(email: ""{email}"", password: ""{password}"") {{ accessToken user {{ email }} }} }}"
-        });
-        
-        var body = await loginRes.Content.ReadAsStringAsync();
-        var json = JsonNode.Parse(body);
-        var token = json?["data"]?["login"]?["accessToken"]?.GetValue<string>();
-        
-        if (string.IsNullOrEmpty(token))
-        {
-            throw new Exception($"Failed to extract token. Body: {body}");
-        }
-        
-        // Create authenticated client
-        var authClient = _factory.CreateClient();
-        authClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        
-        return (authClient, token, email);
     }
 
     [Fact]
@@ -85,6 +19,7 @@ public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program
         var (client, _, _) = await CreateAuthenticatedClientAsync();
 
         // Act
+        // Note: Using raw mutation here to verify specific response fields like ownerId which might not be exposed by Builder result
         var mutation = new
         {
             query = @"
@@ -113,8 +48,8 @@ public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program
         // Arrange
         var (client, _, _) = await CreateAuthenticatedClientAsync();
         
-        // Create a board first
-        await client.PostAsJsonAsync("/graphql", new { query = @"mutation { addBoard(input: { name: ""Paginated Board"" }) { id } }" });
+        // Create a board first using Builder
+        await new BoardBuilder(client).WithName("Paginated Board").BuildAsync();
 
         // Act - Query with Pagination Structure
         var query = new
@@ -151,7 +86,7 @@ public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program
         var (clientB, _, _) = await CreateAuthenticatedClientAsync();
 
         // User A creates a board
-        await clientA.PostAsJsonAsync("/graphql", new { query = @"mutation { addBoard(input: { name: ""User A Board"" }) { id } }" });
+        await new BoardBuilder(clientA).WithName("User A Board").BuildAsync();
 
         // Act - User B queries boards
         var query = new
@@ -182,7 +117,7 @@ public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program
         // 1. Setup User and Data
         var (client, _, email) = await CreateAuthenticatedClientAsync();
         // Create a board
-        await client.PostAsJsonAsync("/graphql", new { query = @"mutation { addBoard(input: { name: ""To Be Deleted"" }) { id } }" });
+        await new BoardBuilder(client).WithName("To Be Deleted").BuildAsync();
 
         // 2. Call Delete Account
         var deleteMutation = new
@@ -195,7 +130,7 @@ public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program
         Assert.Contains("true", deleteBody.ToLower());
 
         // 3. Verify Login Fails
-        var loginRes = await _factory.CreateClient().PostAsJsonAsync("/graphql", new
+        var loginRes = await Factory.CreateClient().PostAsJsonAsync("/graphql", new
         {
             query = $@"mutation {{ login(email: ""{email}"", password: ""Password123!"") {{ accessToken }} }}"
         });
@@ -211,11 +146,8 @@ public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program
         var (clientB, _, _) = await CreateAuthenticatedClientAsync();
 
         // User A creates board
-        var createBoardRes = await clientA.PostAsJsonAsync("/graphql", new { query = @"mutation { addBoard(input: { name: ""My Board"" }) { id } }" });
-        createBoardRes.EnsureSuccessStatusCode();
-        var bodyA = await createBoardRes.Content.ReadAsStringAsync();
-        var jsonA = JsonNode.Parse(bodyA);
-        var boardId = jsonA?["data"]?["addBoard"]?["id"]?.GetValue<string>();
+        var board = await new BoardBuilder(clientA).WithName("My Board").BuildAsync();
+        var boardId = board.BoardId;
 
         // Act - User B tries to add column
         var mutation = new
@@ -242,19 +174,13 @@ public class BoardIntegrationTests : IClassFixture<WebApplicationFactory<Program
         var (clientA, _, _) = await CreateAuthenticatedClientAsync();
         var (clientB, _, _) = await CreateAuthenticatedClientAsync();
 
-        // User A creates board
-        var createBoardRes = await clientA.PostAsJsonAsync("/graphql", new { query = @"mutation { addBoard(input: { name: ""My Board"" }) { id } }" });
-        var bodyA = await createBoardRes.Content.ReadAsStringAsync();
-        var jsonA = JsonNode.Parse(bodyA);
-        var boardId = jsonA?["data"]?["addBoard"]?["id"]?.GetValue<string>();
-
-        // User A creates column
-        var createColRes = await clientA.PostAsJsonAsync("/graphql", new { 
-            query = $@"mutation {{ addColumn(input: {{ boardId: ""{boardId}"", name: ""Backlog"", order: 0 }}) {{ id }} }}" 
-        });
-        var bodyCol = await createColRes.Content.ReadAsStringAsync();
-        var jsonCol = JsonNode.Parse(bodyCol);
-        var columnId = jsonCol?["data"]?["addColumn"]?["id"]?.GetValue<string>();
+        // User A creates board and column
+        var board = await new BoardBuilder(clientA)
+            .WithName("My Board")
+            .WithColumn("Backlog")
+            .BuildAsync();
+        
+        var columnId = board.ColumnIds["Backlog"];
 
         // Act - User B tries to add card
         var mutation = new

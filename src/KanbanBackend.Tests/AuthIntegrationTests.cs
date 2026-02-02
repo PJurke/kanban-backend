@@ -6,24 +6,16 @@ using Xunit;
 
 namespace KanbanBackend.Tests;
 
-public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class AuthIntegrationTests : IntegrationTestBase
 {
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public AuthIntegrationTests(WebApplicationFactory<Program> factory)
+    public AuthIntegrationTests(WebApplicationFactory<Program> factory) : base(factory)
     {
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            // Optional: Configure test DB or services here if needed
-            // For now, we use the SQLite DB configured in Program.cs (Integration Test style)
-            // Ideally, switch to InMemory or a separate Test DB file
-        });
     }
 
     [Fact]
     public async Task FullAuthFlow_RegisterLoginRefreshLogout_WorksCorrectly()
     {
-        var client = _factory.CreateClient();
+        var client = Factory.CreateClient();
         var email = $"test_{Guid.NewGuid()}@example.com";
         var password = "Password123!";
 
@@ -74,7 +66,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
         var cookieValue = Regex.Match(authCookie, "refreshToken=([^;]+)").Groups[1].Value;
 
         // 3. Refresh (Use Cookie)
-        var refreshClient = _factory.CreateClient(); // New client to simulate fresh request (or just add header)
+        var refreshClient = Factory.CreateClient(); // New client to simulate fresh request (or just add header)
         refreshClient.DefaultRequestHeaders.Add("Cookie", $"refreshToken={cookieValue}");
 
         var refreshQuery = new
@@ -104,7 +96,7 @@ public class AuthIntegrationTests : IClassFixture<WebApplicationFactory<Program>
         Assert.NotEqual(cookieValue, newCookieValue); // Rotation confirmed
 
         // 4. Logout
-        var logoutClient = _factory.CreateClient();
+        var logoutClient = Factory.CreateClient();
         logoutClient.DefaultRequestHeaders.Add("Cookie", $"refreshToken={newCookieValue}");
 
         var logoutQuery = new
