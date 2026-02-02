@@ -164,4 +164,39 @@ public class Mutation
 
         return card;
     }
+
+    [Authorize]
+    public async Task<Column> UpdateColumn(
+        UpdateColumnInput input,
+        [Service] AppDbContext context,
+        [Service] IValidator<UpdateColumnInput> validator,
+        [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
+    {
+        validator.ValidateAndThrow(input);
+
+        var userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        var column = await context.Columns
+            .Include(c => c.Board)
+            .FirstOrDefaultAsync(c => c.Id == input.Id);
+            
+        if (column == null)
+        {
+            throw new EntityNotFoundException("Column", input.Id);
+        }
+
+        if (column.Board?.OwnerId != userId)
+        {
+             throw new EntityNotFoundException("Column", input.Id);
+        }
+
+        if (input.WipLimit.HasValue)
+        {
+            column.WipLimit = input.WipLimit.Value;
+        }
+
+        await context.SaveChangesAsync();
+
+        return column;
+    }
 }
