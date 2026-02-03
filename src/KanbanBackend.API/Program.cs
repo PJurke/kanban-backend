@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,7 +75,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     var secret = builder.Configuration["Auth:JwtSecret"] ?? throw new InvalidOperationException("JWT Secret is missing from configuration. Please set 'Auth:JwtSecret'.");
-    var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(secret!));
+    var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret!));
 
     options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
@@ -101,9 +102,12 @@ builder.Services.AddHealthChecks()
 builder.Services
     .AddGraphQLServer()
     .AddQueryType<Query>()
-    .AddMutationType<Mutation>()
+    .AddMutationType(d => d.Name("Mutation"))
     .AddSubscriptionType<KanbanBackend.API.GraphQL.Subscriptions.Subscription>()
     .AddTypeExtension<KanbanBackend.API.GraphQL.Mutations.AuthMutations>()
+    .AddTypeExtension<KanbanBackend.API.GraphQL.Mutations.BoardMutations>()
+    .AddTypeExtension<KanbanBackend.API.GraphQL.Mutations.ColumnMutations>()
+    .AddTypeExtension<KanbanBackend.API.GraphQL.Mutations.CardMutations>()
     .AddProjections()
     .AddFiltering()
     .AddSorting()
