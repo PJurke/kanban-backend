@@ -6,17 +6,22 @@ using KanbanBackend.API.Data;
 using KanbanBackend.API.GraphQL;
 using KanbanBackend.API.GraphQL.Mutations;
 using KanbanBackend.API.GraphQL.Queries;
+using KanbanBackend.API.GraphQL.Subscriptions;
 using KanbanBackend.API.Models;
+using KanbanBackend.API.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Disable legacy claim mapping (SOAP-style)
-System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 // Serilog Configuration
 builder.Host.UseSerilog((context, services, configuration) => configuration
@@ -68,17 +73,17 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(options =>
 {
     var secret = builder.Configuration["Auth:JwtSecret"] ?? throw new InvalidOperationException("JWT Secret is missing from configuration. Please set 'Auth:JwtSecret'.");
-    var key = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret!));
+    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret!));
 
     options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
@@ -93,8 +98,9 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
-builder.Services.AddScoped<KanbanBackend.API.Services.AuthService>();
-builder.Services.AddHostedService<KanbanBackend.API.Services.TokenCleanupService>(); // Daily cleanup
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ICardService, CardService>();
+builder.Services.AddHostedService<TokenCleanupService>(); // Daily cleanup
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>();
@@ -103,11 +109,11 @@ builder.Services
     .AddGraphQLServer()
     .AddQueryType<Query>()
     .AddMutationType(d => d.Name("Mutation"))
-    .AddSubscriptionType<KanbanBackend.API.GraphQL.Subscriptions.Subscription>()
-    .AddTypeExtension<KanbanBackend.API.GraphQL.Mutations.AuthMutations>()
-    .AddTypeExtension<KanbanBackend.API.GraphQL.Mutations.BoardMutations>()
-    .AddTypeExtension<KanbanBackend.API.GraphQL.Mutations.ColumnMutations>()
-    .AddTypeExtension<KanbanBackend.API.GraphQL.Mutations.CardMutations>()
+    .AddSubscriptionType<Subscription>()
+    .AddTypeExtension<AuthMutations>()
+    .AddTypeExtension<BoardMutations>()
+    .AddTypeExtension<ColumnMutations>()
+    .AddTypeExtension<CardMutations>()
     .AddProjections()
     .AddFiltering()
     .AddSorting()

@@ -13,6 +13,7 @@ namespace KanbanBackend.API.GraphQL.Subscriptions;
 
 public class Subscription
 {
+
     [Authorize]
     [SubscribeAndResolve]
     public async ValueTask<ISourceStream<Card>> OnCardMoved(
@@ -35,6 +36,9 @@ public class Subscription
 
         // Return the event stream for this specific board
         // Topic format matches the one in Mutation.cs: "Board_{BoardId}"
+        // Realtime notification for UI updates.
+        // Best-effort only: state is persisted in DB first.
+        // If the event is missed, clients will receive the correct state on next fetch.
         return await receiver.SubscribeAsync<Card>($"Board_{boardId}");
     }
 }
