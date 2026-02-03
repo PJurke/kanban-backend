@@ -13,6 +13,7 @@ using System.Security.Claims;
 
 namespace KanbanBackend.API.GraphQL.Mutations;
 
+using KanbanBackend.API.GraphQL.Payloads;
 using KanbanBackend.API.Services;
 
 [ExtendObjectType("Mutation")]
@@ -47,8 +48,10 @@ public class CardMutations
         return card;
     }
     
+
+
     [Authorize]
-    public async Task<Card> MoveCard(
+    public async Task<CardPayload> MoveCard(
         MoveCardInput input,
         [Service] ICardService cardService, // Injected Service
         [Service] IValidator<MoveCardInput> validator,

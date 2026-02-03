@@ -1,13 +1,17 @@
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
+using KanbanBackend.API.Data;
 using KanbanBackend.Tests.Builders;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace KanbanBackend.Tests;
 
 public class MoveCardIntegrationTests : IntegrationTestBase
 {
+
     public MoveCardIntegrationTests(WebApplicationFactory<Program> factory) : base(factory)
     {
     }
@@ -28,13 +32,14 @@ public class MoveCardIntegrationTests : IntegrationTestBase
 
         var cardId = board.CardIds["Card1"];
         var col2Id = board.ColumnIds["Col2"];
+        var rowVersion = await GetRowVersionFromDb(cardId);
 
         // Act - Move Card to Col2 with new rank
         var mutation = new
         {
             query = $@"
                 mutation {{
-                    moveCard(input: {{ cardId: ""{cardId}"", columnId: ""{col2Id}"", rank: 500 }}) {{
+                    moveCard(input: {{ cardId: ""{cardId}"", columnId: ""{col2Id}"", rank: 500, rowVersion: ""{rowVersion}"" }}) {{
                         id
                         rank
                         columnId
@@ -70,7 +75,7 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         {
             query = $@"
                 mutation {{
-                    moveCard(input: {{ cardId: ""{cardId}"", columnId: ""{colId}"", rank: -1 }}) {{
+                    moveCard(input: {{ cardId: ""{cardId}"", columnId: ""{colId}"", rank: -1, rowVersion: ""MQ=="" }}) {{
                         id
                     }}
                 }}"
@@ -102,7 +107,7 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         {
             query = $@"
                 mutation {{
-                    moveCard(input: {{ cardId: ""{randomCardId}"", columnId: ""{colId}"", rank: 1 }}) {{
+                    moveCard(input: {{ cardId: ""{randomCardId}"", columnId: ""{colId}"", rank: 1, rowVersion: ""MQ=="" }}) {{
                         id
                     }}
                 }}"
@@ -137,7 +142,7 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         {
             query = $@"
                 mutation {{
-                    moveCard(input: {{ cardId: ""{cardId}"", columnId: ""{colId}"", rank: 1 }}) {{
+                    moveCard(input: {{ cardId: ""{cardId}"", columnId: ""{colId}"", rank: 1, rowVersion: ""MQ=="" }}) {{
                         id
                     }}
                 }}"
@@ -171,13 +176,14 @@ public class MoveCardIntegrationTests : IntegrationTestBase
             .WithColumn("Col2")
             .BuildAsync();
         var col2Id = board2.ColumnIds["Col2"];
+        var rowVersion = await GetRowVersionFromDb(cardId);
 
         // Act - Move Card from Board 1 (col1) to Board 2 (col2)
         var mutation = new
         {
             query = $@"
                 mutation {{
-                    moveCard(input: {{ cardId: ""{cardId}"", columnId: ""{col2Id}"", rank: 1 }}) {{
+                    moveCard(input: {{ cardId: ""{cardId}"", columnId: ""{col2Id}"", rank: 1, rowVersion: ""{rowVersion}"" }}) {{
                         id
                     }}
                 }}"
@@ -189,5 +195,14 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         // Assert
         Assert.Contains("errors", body.ToLower());
         Assert.Contains("Cannot move card to a column on a different board", body);
+    }
+
+    private async Task<string> GetRowVersionFromDb(string cardIdStr)
+    {
+        var cardId = Guid.Parse(cardIdStr);
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var card = await db.Cards.FindAsync(cardId);
+        return Convert.ToBase64String(card!.RowVersion);
     }
 }

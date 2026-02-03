@@ -2,6 +2,7 @@ using FluentValidation;
 using HotChocolate.Authorization;
 using HotChocolate.Data;
 using HotChocolate.Validation;
+using KanbanBackend.API.Configuration;
 using KanbanBackend.API.Data;
 using KanbanBackend.API.GraphQL;
 using KanbanBackend.API.GraphQL.Mutations;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.IdentityModel.Tokens.Jwt;
@@ -97,9 +99,16 @@ builder.Services.AddAuthentication(options =>
     options.MapInboundClaims = false; // Disable default claim mapping
 });
 
+
+
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ICardService, CardService>();
+builder.Services.AddOptions<RankRebalancingOptions>()
+    .Bind(builder.Configuration.GetSection(RankRebalancingOptions.SectionName))
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IValidateOptions<RankRebalancingOptions>, RankRebalancingOptionsValidator>();
 builder.Services.AddHostedService<TokenCleanupService>(); // Daily cleanup
 
 builder.Services.AddHealthChecks()

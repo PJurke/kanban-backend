@@ -43,11 +43,19 @@ public class TokenCleanupService : BackgroundService
 
         _logger.LogInformation("Cleaning up expired refresh tokens...");
 
-        // Efficient batch delete (EF Core 7+)
+        // EF Core 7+ ExecuteDeleteAsync might fail on some providers with DateTimeOffset translation
+        // Fallback to standard fetch-and-delete
         var cutoff = DateTimeOffset.UtcNow;
-        var deletedCount = await context.RefreshTokens
+        var expiredTokens = await context.RefreshTokens
             .Where(t => t.Expires < cutoff)
-            .ExecuteDeleteAsync(stoppingToken);
+            .ToListAsync(stoppingToken);
+
+        int deletedCount = 0;
+        if (expiredTokens.Any())
+        {
+            context.RefreshTokens.RemoveRange(expiredTokens);
+            deletedCount = await context.SaveChangesAsync(stoppingToken);
+        }
 
         if (deletedCount > 0)
         {

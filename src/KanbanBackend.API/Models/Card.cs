@@ -8,4 +8,9 @@ public class Card
     
     public Guid ColumnId { get; set; }
     public Column? Column { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Timestamp]
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

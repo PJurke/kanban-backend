@@ -163,12 +163,17 @@ public class WipLimitIntegrationTests : IntegrationTestBase
         var targetColumnId = board.ColumnIds["Target"];
         var cardId = board.CardIds["CardToMove"];
 
-        // Set Limit to 1 on Target
+        // Set Limit to 1 on Target & get RowVersion
+        string rowVersion;
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var c = await db.Columns.FindAsync(Guid.Parse(targetColumnId));
             c!.WipLimit = 1; // Limit is 1, and it already has "ExistingCard"
+            
+            var card = await db.Cards.FindAsync(Guid.Parse(cardId));
+            rowVersion = Convert.ToBase64String(card!.RowVersion);
+            
             await db.SaveChangesAsync();
         }
 
@@ -180,7 +185,8 @@ public class WipLimitIntegrationTests : IntegrationTestBase
                     moveCard(input: {
                         cardId: "{{cardId}}",
                         columnId: "{{targetColumnId}}",
-                        rank: 2500
+                        rank: 2500,
+                        rowVersion: "{{rowVersion}}"
                     }) {
                         id
                         columnId

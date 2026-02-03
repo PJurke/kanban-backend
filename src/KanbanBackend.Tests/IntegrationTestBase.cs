@@ -22,7 +22,10 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactory<
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     { "Auth:JwtSecret", "SuperSecretKeyForTesting1234567890!@" },
-                    { "ConnectionStrings:DefaultConnection", $"Data Source={_dbFileName}" }
+                    { "ConnectionStrings:DefaultConnection", $"Data Source={_dbFileName}" },
+                    { "RankRebalancing:MinGap", "0.001" },
+                    { "RankRebalancing:Spacing", "1000" },
+                    { "RankRebalancing:MaxAttempts", "3" }
                 });
             });
         });
@@ -62,7 +65,15 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactory<
         });
         
         var body = await loginRes.Content.ReadAsStringAsync();
-        var json = JsonNode.Parse(body);
+        JsonNode? json;
+        try
+        {
+            json = JsonNode.Parse(body);
+        }
+        catch (Exception ex)
+        {
+             throw new Exception($"Failed to parse JSON. Status: {loginRes.StatusCode}. Body: {body}", ex);
+        }
         var token = json?["data"]?["login"]?["accessToken"]?.GetValue<string>();
         
         if (string.IsNullOrEmpty(token))

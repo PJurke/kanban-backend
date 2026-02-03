@@ -1,6 +1,7 @@
 using FluentValidation;
 using HotChocolate;
 using KanbanBackend.API.Exceptions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace KanbanBackend.API.GraphQL;
@@ -33,6 +34,12 @@ public class GraphQLErrorFilter : IErrorFilter
                         .WithMessage(error.Exception.Message);
         }
 
+        if (error.Exception is PreconditionRequiredException)
+        {
+            return error.WithCode("PRECONDITION_REQUIRED")
+                        .WithMessage(error.Exception.Message);
+        }
+
         if (error.Exception is ValidationException validationException)
         {
             var extensions = new Dictionary<string, object?>
@@ -43,6 +50,12 @@ public class GraphQLErrorFilter : IErrorFilter
             return error.WithCode("VALIDATION_ERROR")
                         .WithMessage("Validation failed.")
                         .WithExtensions(extensions);
+        }
+
+        if (error.Exception is DbUpdateConcurrencyException)
+        {
+             return error.WithCode("CONFLICT")
+                         .WithMessage("Card was modified by another operation. Please reload.");
         }
 
         if (error.Exception != null)

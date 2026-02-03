@@ -49,5 +49,9 @@ public class AppDbContext : IdentityDbContext<AppUser>
                   .HasForeignKey("RefreshToken", "ReplacedByTokenId")
                   .OnDelete(DeleteBehavior.Restrict); // Don't auto-delete history on rotation
         });
+
+        modelBuilder.Entity<Card>()
+            .Property(c => c.RowVersion)
+            .IsRowVersion();
     }
 }
