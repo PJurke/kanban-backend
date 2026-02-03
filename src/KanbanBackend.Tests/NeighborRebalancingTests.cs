@@ -1,7 +1,9 @@
 using FluentAssertions;
+using FluentValidation;
 using HotChocolate.Subscriptions;
 using KanbanBackend.API.Configuration;
 using KanbanBackend.API.Data;
+using KanbanBackend.API.GraphQL.Inputs;
 using KanbanBackend.API.Models;
 using KanbanBackend.API.Services;
 using Microsoft.EntityFrameworkCore;
@@ -17,24 +19,25 @@ public class NeighborRebalancingTests
     private readonly Mock<ITopicEventSender> _eventSenderMock = new();
     private readonly Mock<IOptions<RankRebalancingOptions>> _optionsMock = new();
     private readonly Mock<ILogger<CardService>> _loggerMock = new();
+    private readonly Mock<IValidator<AddCardInput>> _validatorMock = new();
     private readonly AppDbContext _context;
     private readonly CardService _service;
 
     public NeighborRebalancingTests()
     {
-         var options = new DbContextOptionsBuilder<AppDbContext>()
+        var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         _context = new AppDbContext(options);
 
         // MinGap = 1.0 for easy testing
-        _optionsMock.Setup(o => o.Value).Returns(new RankRebalancingOptions { 
-            MinGap = 1.0, 
+        _optionsMock.Setup(o => o.Value).Returns(new RankRebalancingOptions {
+            MinGap = 1.0,
             Spacing = 1000.0,
             MaxAttempts = 1
         });
 
-        _service = new CardService(_context, _eventSenderMock.Object, _optionsMock.Object, _loggerMock.Object);
+        _service = new CardService(_context, _eventSenderMock.Object, _optionsMock.Object, _loggerMock.Object, _validatorMock.Object);
     }
 
     [Fact]

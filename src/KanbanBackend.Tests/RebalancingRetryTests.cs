@@ -1,8 +1,10 @@
 using FluentAssertions;
-using KanbanBackend.API.Exceptions;
+using FluentValidation;
 using HotChocolate.Subscriptions;
 using KanbanBackend.API.Configuration;
 using KanbanBackend.API.Data;
+using KanbanBackend.API.Exceptions;
+using KanbanBackend.API.GraphQL.Inputs;
 using KanbanBackend.API.Models;
 using KanbanBackend.API.Services;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +20,7 @@ public class RebalancingRetryTests
     private readonly Mock<ITopicEventSender> _eventSenderMock = new();
     private readonly Mock<IOptions<RankRebalancingOptions>> _optionsMock = new();
     private readonly Mock<ILogger<CardService>> _loggerMock = new();
+    private readonly Mock<IValidator<AddCardInput>> _validatorMock = new();
 
     // Custom Context to simulate faults
     public class FaultyDbContext : AppDbContext
@@ -58,7 +61,7 @@ public class RebalancingRetryTests
         // Setup Logger to verify warnings
         // _loggerMock.Setup... verify later.
 
-        var service = new CardService(db, _eventSenderMock.Object, _optionsMock.Object, _loggerMock.Object);
+        var service = new CardService(db, _eventSenderMock.Object, _optionsMock.Object, _loggerMock.Object, _validatorMock.Object);
 
         var board = new Board { Id = Guid.NewGuid(), Name = "B", OwnerId = "u" };
         var col = new Column { Id = Guid.NewGuid(), BoardId = board.Id, Name = "C", Order = 0 };

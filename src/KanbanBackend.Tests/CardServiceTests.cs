@@ -1,4 +1,5 @@
 using FluentAssertions;
+using FluentValidation;
 using HotChocolate.Subscriptions;
 using KanbanBackend.API.Configuration;
 using Microsoft.Extensions.Logging;
@@ -32,13 +33,14 @@ public class CardServiceTests
 
         _context = new AppDbContext(options);
         _eventSenderMock = new Mock<ITopicEventSender>();
-        
+
         var optionsMock = new Mock<IOptions<RankRebalancingOptions>>();
         optionsMock.Setup(o => o.Value).Returns(new RankRebalancingOptions());
-        
+
         var loggerMock = new Mock<ILogger<CardService>>();
-        
-        _cardService = new CardService(_context, _eventSenderMock.Object, optionsMock.Object, loggerMock.Object);
+        var validatorMock = new Mock<IValidator<AddCardInput>>();
+
+        _cardService = new CardService(_context, _eventSenderMock.Object, optionsMock.Object, loggerMock.Object, validatorMock.Object);
     }
 
     [Fact]

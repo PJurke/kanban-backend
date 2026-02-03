@@ -145,7 +145,13 @@ public class AuthService
         _context.RefreshTokens.Update(oldToken);
         await _context.SaveChangesAsync();
 
-        var accessToken = GenerateJwtToken(oldToken.User!);
+        if (oldToken.User == null)
+        {
+            _logger.LogError("Token rotation failed: User not loaded for token {TokenId}, UserId {UserId}", oldToken.Id, oldToken.UserId);
+            throw new InvalidOperationException("User must be loaded for token rotation");
+        }
+
+        var accessToken = GenerateJwtToken(oldToken.User);
         return new AuthResult(accessToken, newRefreshToken, newRefreshTokenEntity.Expires);
     }
 

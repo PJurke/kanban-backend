@@ -1,3 +1,4 @@
+using FluentValidation;
 using HotChocolate.Subscriptions;
 using KanbanBackend.API.Configuration;
 using Microsoft.Extensions.Logging;
@@ -13,23 +14,50 @@ namespace KanbanBackend.API.Services;
 
 public class CardService : ICardService
 {
-
-
     private readonly AppDbContext _context;
     private readonly ITopicEventSender _eventSender;
     private readonly RankRebalancingOptions _rebalancingOptions;
     private readonly ILogger<CardService> _logger;
+    private readonly IValidator<AddCardInput> _addCardValidator;
 
     public CardService(
-        AppDbContext context, 
+        AppDbContext context,
         ITopicEventSender eventSender,
         IOptions<RankRebalancingOptions> rebalancingOptions,
-        ILogger<CardService> logger)
+        ILogger<CardService> logger,
+        IValidator<AddCardInput> addCardValidator)
     {
         _context = context;
         _eventSender = eventSender;
         _rebalancingOptions = rebalancingOptions.Value;
         _logger = logger;
+        _addCardValidator = addCardValidator;
+    }
+
+    public async Task<Card> AddCardAsync(AddCardInput input, string userId)
+    {
+        await _addCardValidator.ValidateAndThrowAsync(input);
+
+        var columnExists = await _context.Columns
+            .AnyAsync(c => c.Id == input.ColumnId && c.Board.OwnerId == userId);
+
+        if (!columnExists)
+        {
+            throw new EntityNotFoundException("Column", input.ColumnId);
+        }
+
+        var card = new Card
+        {
+            Id = Guid.NewGuid(),
+            ColumnId = input.ColumnId,
+            Name = input.Name,
+            Rank = input.Rank
+        };
+
+        _context.Cards.Add(card);
+        await _context.SaveChangesAsync();
+
+        return card;
     }
 
     public async Task<CardPayload> MoveCardAsync(Guid cardId, MoveCardInput input, string userId)
