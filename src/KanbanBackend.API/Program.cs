@@ -104,6 +104,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ICardService, CardService>();
+builder.Services.AddScoped<IBoardService, BoardService>();
+builder.Services.AddScoped<IColumnService, ColumnService>();
 builder.Services.AddOptions<RankRebalancingOptions>()
     .Bind(builder.Configuration.GetSection(RankRebalancingOptions.SectionName))
     .ValidateOnStart();
