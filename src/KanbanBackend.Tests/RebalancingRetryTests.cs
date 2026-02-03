@@ -1,5 +1,5 @@
 using FluentAssertions;
-using HotChocolate;
+using KanbanBackend.API.Exceptions;
 using HotChocolate.Subscriptions;
 using KanbanBackend.API.Configuration;
 using KanbanBackend.API.Data;
@@ -91,8 +91,8 @@ public class RebalancingRetryTests
 
         // Assert
         // Logic will retry 3 times. All fail. Should throw GraphQLException.
-        await act.Should().ThrowAsync<GraphQLException>()
-            .WithMessage("Rank rebalance failed; please retry.");
+        await act.Should().ThrowAsync<RebalanceFailedException>()
+            .WithMessage("*rebalance failed*");
 
         // Verify Log
         // Should log warning 3 times.

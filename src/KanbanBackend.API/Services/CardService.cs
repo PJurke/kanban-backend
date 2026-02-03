@@ -1,4 +1,3 @@
-using HotChocolate;
 using HotChocolate.Subscriptions;
 using KanbanBackend.API.Configuration;
 using Microsoft.Extensions.Logging;
@@ -204,7 +203,7 @@ public class CardService : ICardService
 
                 if (attempt == _rebalancingOptions.MaxAttempts)
                 {
-                     throw new GraphQLException(new Error("Rank rebalance failed; please retry.", "REBALANCE_FAILED"));
+                     throw new RebalanceFailedException(columnId, _rebalancingOptions.MaxAttempts);
                 }
                 
                 await Task.Delay(50 * attempt);

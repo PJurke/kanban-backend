@@ -40,6 +40,12 @@ public class GraphQLErrorFilter : IErrorFilter
                         .WithMessage(error.Exception.Message);
         }
 
+        if (error.Exception is RebalanceFailedException)
+        {
+            return error.WithCode("REBALANCE_FAILED")
+                        .WithMessage(error.Exception.Message);
+        }
+
         if (error.Exception is ValidationException validationException)
         {
             var extensions = new Dictionary<string, object?>
