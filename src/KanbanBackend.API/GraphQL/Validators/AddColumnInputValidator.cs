@@ -11,5 +11,8 @@ public class AddColumnInputValidator : AbstractValidator<AddColumnInput>
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Column name is required.")
             .MaximumLength(100).WithMessage("Column name must not exceed 100 characters.");
+
+        RuleFor(x => x.Order)
+            .GreaterThanOrEqualTo(0).WithMessage("Order must be non-negative.");
     }
 }

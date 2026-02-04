@@ -103,11 +103,13 @@ builder.Services.AddAuthentication(options =>
 
 
 builder.Services.AddAuthorization();
-builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IRankRebalancingService, RankRebalancingService>();
 builder.Services.AddScoped<ICardService, CardService>();
 builder.Services.AddScoped<IBoardService, BoardService>();
 builder.Services.AddScoped<IColumnService, ColumnService>();
+builder.Services.AddScoped<IRateLimitingService, RateLimitingService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddOptions<RankRebalancingOptions>()
     .Bind(builder.Configuration.GetSection(RankRebalancingOptions.SectionName))
     .ValidateOnStart();

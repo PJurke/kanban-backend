@@ -33,7 +33,7 @@ public class CardService : ICardService
         await _addCardValidator.ValidateAndThrowAsync(input);
 
         var columnExists = await _context.Columns
-            .AnyAsync(c => c.Id == input.ColumnId && c.Board.OwnerId == userId);
+            .AnyAsync(c => c.Id == input.ColumnId && c.Board != null && c.Board.OwnerId == userId);
 
         if (!columnExists)
         {

@@ -19,7 +19,7 @@ public class AuthMutations
     public async Task<UserPayload> RegisterAsync(
         string email,
         string password,
-        [Service] AuthService authService,
+        [Service] IAuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
         [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
         [Service] IOptions<RateLimitingOptions> rateLimitingOptions)
@@ -41,7 +41,7 @@ public class AuthMutations
     public async Task<AuthPayload> LoginAsync(
         string email,
         string password,
-        [Service] AuthService authService,
+        [Service] IAuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
         [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
         [Service] IOptions<RateLimitingOptions> rateLimitingOptions)
@@ -63,7 +63,7 @@ public class AuthMutations
 
     [AllowAnonymous]
     public async Task<AuthPayload> RefreshTokenAsync(
-        [Service] AuthService authService,
+        [Service] IAuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
         [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
         [Service] IOptions<RateLimitingOptions> rateLimitingOptions)
@@ -113,7 +113,7 @@ public class AuthMutations
     }
 
     public async Task<bool> LogoutAsync(
-        [Service] AuthService authService,
+        [Service] IAuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor)
     {
         var refreshToken = httpContextAccessor.HttpContext!.Request.Cookies["refreshToken"];
@@ -129,7 +129,7 @@ public class AuthMutations
     [Authorize]
     public async Task<bool> DeleteAccountAsync(
         string password,
-        [Service] AuthService authService,
+        [Service] IAuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
         [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {

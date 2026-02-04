@@ -5,11 +5,10 @@ using HotChocolate.Subscriptions;
 using HotChocolate.Types;
 using KanbanBackend.API.Data;
 using KanbanBackend.API.Extensions;
+using KanbanBackend.API.GraphQL.Payloads;
 using KanbanBackend.API.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-
-using KanbanBackend.API.GraphQL.Payloads;
 
 namespace KanbanBackend.API.GraphQL.Subscriptions;
 
@@ -17,35 +16,34 @@ public class Subscription
 {
 
     [Authorize]
-    [SubscribeAndResolve]
-    public async ValueTask<ISourceStream<CardPayload>> OnCardMoved(
+    [GraphQLIgnore]
+    public async ValueTask<ISourceStream<CardPayload>> OnCardMovedStream(
         Guid boardId,
         [Service] ITopicEventReceiver receiver,
         [Service] AppDbContext context,
         [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
         await ValidateBoardOwnershipAsync(boardId, context, user);
-
-        // Return the event stream for this specific board
-        // Topic format matches the one in Mutation.cs: "Board_{BoardId}"
-        // Realtime notification for UI updates.
-        // Best-effort only: state is persisted in DB first.
-        // If the event is missed, clients will receive the correct state on next fetch.
         return await receiver.SubscribeAsync<CardPayload>($"Board_{boardId}");
     }
 
+    [Subscribe(With = nameof(OnCardMovedStream))]
+    public CardPayload OnCardMoved([EventMessage] CardPayload message) => message;
+
     [Authorize]
-    [SubscribeAndResolve]
-    public async ValueTask<ISourceStream<ColumnRebalancedPayload>> OnColumnRebalanced(
+    [GraphQLIgnore]
+    public async ValueTask<ISourceStream<ColumnRebalancedPayload>> OnColumnRebalancedStream(
         Guid boardId,
         [Service] ITopicEventReceiver receiver,
         [Service] AppDbContext context,
         [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
         await ValidateBoardOwnershipAsync(boardId, context, user);
-
         return await receiver.SubscribeAsync<ColumnRebalancedPayload>($"BoardRebalance_{boardId}");
     }
+
+    [Subscribe(With = nameof(OnColumnRebalancedStream))]
+    public ColumnRebalancedPayload OnColumnRebalanced([EventMessage] ColumnRebalancedPayload message) => message;
 
     /// <summary>
     /// Validates that the current user owns the specified board.

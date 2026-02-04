@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace KanbanBackend.API.Services;
 
-public class AuthService
+public class AuthService : IAuthService
 {
     private readonly UserManager<AppUser> _userManager;
     private readonly SignInManager<AppUser> _signInManager;
