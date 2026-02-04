@@ -203,6 +203,6 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var card = await db.Cards.FindAsync(cardId);
-        return Convert.ToBase64String(card!.RowVersion);
+        return Convert.ToBase64String(BitConverter.GetBytes(card!.RowVersion));
     }
 }

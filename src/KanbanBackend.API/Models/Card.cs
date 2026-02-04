@@ -9,8 +9,12 @@ public class Card
     public Guid ColumnId { get; set; }
     public Column? Column { get; set; }
 
-    [System.ComponentModel.DataAnnotations.Timestamp]
-    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    [GraphQLIgnore]
+    public uint RowVersion { get; set; }
+
+    [GraphQLName("rowVersion")]
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string RowVersionToken => Convert.ToBase64String(BitConverter.GetBytes(RowVersion));
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

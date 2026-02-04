@@ -89,7 +89,7 @@ public class ConcurrencyIntegrationTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var card = await db.Cards.FindAsync(cardId);
-        var oldVersion = Convert.ToBase64String(card!.RowVersion);
+        var oldVersion = Convert.ToBase64String(BitConverter.GetBytes(card!.RowVersion));
 
         // Simulate another user updating the card (e.g. changing name or moving it)
         // We do this by sneaking into the DB and updating it, which changes RowVersion
@@ -149,7 +149,7 @@ public class ConcurrencyIntegrationTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var c = await db.Cards.FindAsync(card3Id);
-            card3Version = Convert.ToBase64String(c!.RowVersion);
+            card3Version = Convert.ToBase64String(BitConverter.GetBytes(c!.RowVersion));
         }
 
         // Act: Move C3 to exactly the same rank as C1 (Rank collision)

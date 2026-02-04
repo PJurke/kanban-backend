@@ -4,17 +4,19 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Xunit;
+using Testcontainers.PostgreSql;
 
 namespace KanbanBackend.Tests;
 
-public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>, IDisposable
+public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactory<Program>>, IDisposable, IAsyncLifetime
 {
     protected readonly WebApplicationFactory<Program> Factory;
-    private readonly string _dbFileName;
+    private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()
+        .WithImage("postgres:15-alpine")
+        .Build();
 
     protected IntegrationTestBase(WebApplicationFactory<Program> factory)
     {
-        _dbFileName = $"test_{Guid.NewGuid()}.db";
         Factory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((context, config) =>
@@ -22,7 +24,7 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactory<
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     { "Auth:JwtSecret", "SuperSecretKeyForTesting1234567890!@" },
-                    { "ConnectionStrings:DefaultConnection", $"Data Source={_dbFileName}" },
+                    { "ConnectionStrings:DefaultConnection", _dbContainer.GetConnectionString() },
                     { "RankRebalancing:MinGap", "0.001" },
                     { "RankRebalancing:Spacing", "1000" },
                     { "RankRebalancing:MaxAttempts", "3" }
@@ -31,19 +33,19 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactory<
         });
     }
 
+    public async Task InitializeAsync()
+    {
+        await _dbContainer.StartAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
+        await _dbContainer.StopAsync();
+    }
+
     public void Dispose()
     {
-        if (File.Exists(_dbFileName))
-        {
-            try
-            {
-                File.Delete(_dbFileName);
-            }
-            catch
-            {
-                // Ignored to prevent test failures during cleanup
-            }
-        }
+        // No-op
     }
 
     protected async Task<(HttpClient Client, string UserId, string Email)> CreateAuthenticatedClientAsync()

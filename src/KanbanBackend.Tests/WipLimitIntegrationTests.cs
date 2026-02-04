@@ -172,7 +172,7 @@ public class WipLimitIntegrationTests : IntegrationTestBase
             c!.WipLimit = 1; // Limit is 1, and it already has "ExistingCard"
             
             var card = await db.Cards.FindAsync(Guid.Parse(cardId));
-            rowVersion = Convert.ToBase64String(card!.RowVersion);
+            rowVersion = Convert.ToBase64String(BitConverter.GetBytes(card!.RowVersion));
             
             await db.SaveChangesAsync();
         }

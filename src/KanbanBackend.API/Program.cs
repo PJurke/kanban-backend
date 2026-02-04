@@ -2,6 +2,7 @@ using FluentValidation;
 using HotChocolate.Authorization;
 using HotChocolate.Data;
 using HotChocolate.Validation;
+using HotChocolate.Types;
 using KanbanBackend.API.Configuration;
 using KanbanBackend.API.Data;
 using KanbanBackend.API.GraphQL;
@@ -61,7 +62,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
     }
 
-    options.UseSqlite(connectionString);
+    options.UseNpgsql(connectionString);
 });
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>

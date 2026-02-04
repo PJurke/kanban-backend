@@ -17,7 +17,7 @@ public class CardPayload
         ColumnId = card.ColumnId;
         Name = card.Name;
         Rank = card.Rank;
-        RowVersion = Convert.ToBase64String(card.RowVersion);
+        RowVersion = Convert.ToBase64String(BitConverter.GetBytes(card.RowVersion));
         CreatedAt = card.CreatedAt;
     }
 }

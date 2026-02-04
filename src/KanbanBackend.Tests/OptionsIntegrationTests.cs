@@ -8,13 +8,10 @@ using Xunit;
 
 namespace KanbanBackend.Tests;
 
-public class OptionsIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class OptionsIntegrationTests : IntegrationTestBase
 {
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public OptionsIntegrationTests(WebApplicationFactory<Program> factory)
+    public OptionsIntegrationTests(WebApplicationFactory<Program> factory) : base(factory)
     {
-        _factory = factory;
     }
 
     [Fact]
@@ -27,7 +24,7 @@ public class OptionsIntegrationTests : IClassFixture<WebApplicationFactory<Progr
             { "RankRebalancing:Spacing", "42.0" }
         };
 
-        var client = _factory.WithWebHostBuilder(builder =>
+        var client = Factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((context, config) =>
             {

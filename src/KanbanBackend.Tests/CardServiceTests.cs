@@ -19,7 +19,7 @@ public class CardServiceTests
     private readonly Mock<ITopicEventSender> _eventSenderMock;
     private readonly Mock<IRankRebalancingService> _rebalancingServiceMock;
     private readonly CardService _cardService;
-    private readonly string _dummyVersion = Convert.ToBase64String(new byte[] { 0, 0, 0, 1 });
+    private readonly string _dummyVersion = Convert.ToBase64String(BitConverter.GetBytes(1u));
 
     public CardServiceTests()
     {
@@ -130,7 +130,7 @@ public class CardServiceTests
         var col2 = new Column { Id = Guid.NewGuid(), BoardId = board.Id, Name = "Col2", Order = 1 };
 
         // Ensure RowVersion is set in DB to match what we assume
-        var card = new Card { Id = Guid.NewGuid(), ColumnId = col1.Id, Name = "Card1", Rank = 0, RowVersion = new byte[]{0,0,0,1} };
+        var card = new Card { Id = Guid.NewGuid(), ColumnId = col1.Id, Name = "Card1", Rank = 0, RowVersion = 1 };
 
         _context.Boards.Add(board);
         _context.Columns.AddRange(col1, col2);
@@ -162,7 +162,7 @@ public class CardServiceTests
         // Arrange
         var board = new Board { Id = Guid.NewGuid(), Name = "Board1", OwnerId = "owner" };
         var column = new Column { Id = Guid.NewGuid(), BoardId = board.Id, Name = "Col1", Order = 0 };
-        var card = new Card { Id = Guid.NewGuid(), ColumnId = column.Id, Name = "Card1", Rank = 0, RowVersion = new byte[]{0,0,0,1} };
+        var card = new Card { Id = Guid.NewGuid(), ColumnId = column.Id, Name = "Card1", Rank = 0, RowVersion = 1 };
 
         _context.Boards.Add(board);
         _context.Columns.Add(column);

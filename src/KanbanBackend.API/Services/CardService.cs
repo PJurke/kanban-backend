@@ -99,17 +99,22 @@ public class CardService : ICardService
             throw new PreconditionRequiredException("RowVersion is required for this operation.");
         }
 
-        byte[] clientVersion;
-        try
+        try 
         {
-            clientVersion = Convert.FromBase64String(input.RowVersion);
+            // Convert Base64 (transport) back to uint (EF Core Concurrency Token)
+            var bytes = Convert.FromBase64String(input.RowVersion);
+            if (bytes.Length != 4)
+                throw new PreconditionRequiredException("Invalid RowVersion format (expected 4 bytes for uint).");
+            
+            var clientVersion = BitConverter.ToUInt32(bytes);
+
+            // Set OriginalValue for Concurrency Check
+            _context.Entry(card).OriginalValues["RowVersion"] = clientVersion;
         }
         catch (FormatException)
         {
             throw new PreconditionRequiredException("Invalid RowVersion format (Base64 expected).");
         }
-
-        _context.Entry(card).OriginalValues["RowVersion"] = clientVersion;
 
         // 4. Update State
         card.ColumnId = input.ColumnId;

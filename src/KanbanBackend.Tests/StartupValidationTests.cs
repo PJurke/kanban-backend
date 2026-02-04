@@ -8,13 +8,10 @@ using Xunit;
 
 namespace KanbanBackend.Tests;
 
-public class StartupValidationTests : IClassFixture<WebApplicationFactory<Program>>
+public class StartupValidationTests : IntegrationTestBase
 {
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public StartupValidationTests(WebApplicationFactory<Program> factory)
+    public StartupValidationTests(WebApplicationFactory<Program> factory) : base(factory)
     {
-        _factory = factory;
     }
 
     [Fact]
@@ -27,7 +24,7 @@ public class StartupValidationTests : IClassFixture<WebApplicationFactory<Progra
             { "RankRebalancing:Spacing", "10" } // MinGap > Spacing -> Invalid
         };
 
-        var clientFactory = _factory.WithWebHostBuilder(builder =>
+        var clientFactory = Factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((context, config) =>
             {
