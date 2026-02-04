@@ -1,10 +1,10 @@
 using HotChocolate;
 using HotChocolate.Authorization;
 using HotChocolate.Types;
+using KanbanBackend.API.Extensions;
 using KanbanBackend.API.GraphQL.Inputs;
 using KanbanBackend.API.Models;
 using KanbanBackend.API.Services;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace KanbanBackend.API.GraphQL.Mutations;
@@ -18,11 +18,7 @@ public class ColumnMutations
         [Service] IColumnService columnService,
         [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
-        var userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (string.IsNullOrEmpty(userId))
-        {
-            throw new GraphQLException(new Error("User ID not found in token", "AUTH_INVALID_TOKEN"));
-        }
+        var userId = user.GetRequiredUserId();
 
         return await columnService.AddColumnAsync(input, userId);
     }
@@ -33,11 +29,7 @@ public class ColumnMutations
         [Service] IColumnService columnService,
         [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
-        var userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (string.IsNullOrEmpty(userId))
-        {
-            throw new GraphQLException(new Error("User ID not found in token", "AUTH_INVALID_TOKEN"));
-        }
+        var userId = user.GetRequiredUserId();
 
         return await columnService.UpdateColumnAsync(input, userId);
     }

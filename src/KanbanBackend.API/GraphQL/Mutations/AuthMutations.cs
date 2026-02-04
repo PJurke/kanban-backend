@@ -1,12 +1,14 @@
 using HotChocolate;
 using HotChocolate.Types;
 using HotChocolate.Authorization;
+using KanbanBackend.API.Configuration;
+using KanbanBackend.API.Extensions;
 using KanbanBackend.API.Models;
 using KanbanBackend.API.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory; // Extension methods for GetOrCreate
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace KanbanBackend.API.GraphQL.Mutations;
 
@@ -19,10 +21,12 @@ public class AuthMutations
         string password,
         [Service] AuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
-        [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
+        [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
+        [Service] IOptions<RateLimitingOptions> rateLimitingOptions)
     {
         var ip = httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
-        CheckRateLimit(cache, $"Register_{ip}", 5, TimeSpan.FromMinutes(1)); // Strict: 5/min
+        var options = rateLimitingOptions.Value;
+        CheckRateLimit(cache, $"Register_{ip}", options.RegisterLimit, TimeSpan.FromMinutes(options.WindowMinutes));
 
         var result = await authService.RegisterAsync(email, password);
         if (!result.Succeeded)
@@ -39,10 +43,12 @@ public class AuthMutations
         string password,
         [Service] AuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
-        [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
+        [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
+        [Service] IOptions<RateLimitingOptions> rateLimitingOptions)
     {
         var ip = httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
-        CheckRateLimit(cache, $"Login_{ip}", 5, TimeSpan.FromMinutes(1)); // Strict: 5/min
+        var options = rateLimitingOptions.Value;
+        CheckRateLimit(cache, $"Login_{ip}", options.LoginLimit, TimeSpan.FromMinutes(options.WindowMinutes));
 
         var result = await authService.LoginAsync(email, password);
         if (result == null)
@@ -59,10 +65,12 @@ public class AuthMutations
     public async Task<AuthPayload> RefreshTokenAsync(
         [Service] AuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
-        [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
+        [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
+        [Service] IOptions<RateLimitingOptions> rateLimitingOptions)
     {
         var ip = httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
-        CheckRateLimit(cache, $"Refresh_{ip}", 30, TimeSpan.FromMinutes(1)); // Moderate: 30/min
+        var options = rateLimitingOptions.Value;
+        CheckRateLimit(cache, $"Refresh_{ip}", options.RefreshLimit, TimeSpan.FromMinutes(options.WindowMinutes));
 
         var refreshToken = httpContextAccessor.HttpContext!.Request.Cookies["refreshToken"];
         if (string.IsNullOrEmpty(refreshToken))
@@ -125,11 +133,7 @@ public class AuthMutations
         [Service] IHttpContextAccessor httpContextAccessor,
         [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
-        var userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (string.IsNullOrEmpty(userId))
-        {
-             throw new GraphQLException(new Error("Unauthorized", "AUTH_REQUIRED"));
-        }
+        var userId = user.GetRequiredUserId();
 
         var result = await authService.DeleteAccountAsync(userId, password);
         if (!result.Succeeded)

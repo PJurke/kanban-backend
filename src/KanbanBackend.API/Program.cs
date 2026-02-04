@@ -112,6 +112,12 @@ builder.Services.AddOptions<RankRebalancingOptions>()
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IValidateOptions<RankRebalancingOptions>, RankRebalancingOptionsValidator>();
+
+builder.Services.AddOptions<RateLimitingOptions>()
+    .Bind(builder.Configuration.GetSection(RateLimitingOptions.SectionName))
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IValidateOptions<RateLimitingOptions>, RateLimitingOptionsValidator>();
 builder.Services.AddHostedService<TokenCleanupService>(); // Daily cleanup
 
 builder.Services.AddHealthChecks()

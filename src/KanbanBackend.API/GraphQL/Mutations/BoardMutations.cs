@@ -1,9 +1,9 @@
 using HotChocolate;
 using HotChocolate.Authorization;
 using HotChocolate.Types;
+using KanbanBackend.API.Extensions;
 using KanbanBackend.API.GraphQL.Inputs;
 using KanbanBackend.API.Models;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using KanbanBackend.API.Services;
 
@@ -18,11 +18,7 @@ public class BoardMutations
         [Service] IBoardService boardService,
         [GlobalState("ClaimsPrincipal")] ClaimsPrincipal user)
     {
-        var userId = user.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (string.IsNullOrEmpty(userId))
-        {
-             throw new GraphQLException(new Error("User ID not found in token", "AUTH_INVALID_TOKEN"));
-        }
+        var userId = user.GetRequiredUserId();
 
         return await boardService.AddBoardAsync(input, userId);
     }
