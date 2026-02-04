@@ -52,7 +52,7 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactory<
     {
         var client = Factory.CreateClient();
         var email = $"user_{Guid.NewGuid()}@example.com";
-        var password = "Password123!";
+        var password = TestConstants.DefaultPassword;
 
         // Register
         await client.PostAsJsonAsync("/graphql", new

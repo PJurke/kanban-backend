@@ -182,10 +182,9 @@ public class AuthService : IAuthService
 
         // 2. Delete User's Boards (Manual Cascadation)
         // Since there is no FK constraint, we must delete them explicitly.
-        // EF Core 7+ ExecuteDeleteAsync is efficient here.
-        await _context.Boards
-            .Where(b => b.OwnerId == userId)
-            .ExecuteDeleteAsync();
+        var boards = await _context.Boards.Where(b => b.OwnerId == userId).ToListAsync();
+        _context.Boards.RemoveRange(boards);
+        await _context.SaveChangesAsync();
 
         // 3. Delete User (Identity)
         // This fails if there are other FK constraints (like RefreshTokens). 

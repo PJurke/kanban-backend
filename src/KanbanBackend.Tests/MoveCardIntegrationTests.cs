@@ -1,10 +1,11 @@
-using System.Net.Http.Json;
-using System.Text.Json.Nodes;
+using FluentAssertions;
 using KanbanBackend.API.Data;
 using KanbanBackend.Tests.Builders;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace KanbanBackend.Tests;
@@ -51,9 +52,9 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.DoesNotContain("errors", body.ToLower());
-        Assert.Contains(col2Id, body);
-        Assert.Contains("500", body);
+        body.ToLower().Should().NotContain("errors");
+        body.Should().Contain(col2Id);
+        body.Should().Contain("500");
     }
 
     [Fact]
@@ -85,8 +86,8 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.Contains("errors", body.ToLower());
-        Assert.Contains("VALIDATION_ERROR", body);
+        body.ToLower().Should().Contain("errors");
+        body.Should().Contain("VALIDATION_ERROR");
     }
 
     [Fact]
@@ -117,8 +118,8 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.Contains("errors", body.ToLower());
-        Assert.Contains("NOT_FOUND", body);
+        body.ToLower().Should().Contain("errors");
+        body.Should().Contain("NOT_FOUND");
     }
 
     [Fact]
@@ -152,8 +153,8 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.Contains("errors", body.ToLower());
-        Assert.Contains("NOT_FOUND", body);
+        body.ToLower().Should().Contain("errors");
+        body.Should().Contain("NOT_FOUND");
     }
 
     [Fact]
@@ -193,8 +194,8 @@ public class MoveCardIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.Contains("errors", body.ToLower());
-        Assert.Contains("Cannot move card to a column on a different board", body);
+        body.ToLower().Should().Contain("errors");
+        body.Should().Contain("Cannot move card to a column on a different board");
     }
 
     private async Task<string> GetRowVersionFromDb(string cardIdStr)

@@ -1,3 +1,4 @@
+using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
 using KanbanBackend.API.Data;
@@ -72,12 +73,12 @@ public class ColumnServiceTests
         var result = await _service.AddColumnAsync(input, userId);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(input.Name, result.Name);
-        Assert.Equal(input.BoardId, result.BoardId);
+        result.Should().NotBeNull();
+        result.Name.Should().Be(input.Name);
+        result.BoardId.Should().Be(input.BoardId);
 
         var dbColumn = await _context.Columns.FindAsync(result.Id);
-        Assert.NotNull(dbColumn);
+        dbColumn.Should().NotBeNull();
     }
 
     [Fact]
@@ -92,7 +93,8 @@ public class ColumnServiceTests
             .ThrowsAsync(new EntityNotFoundException("Board", input.BoardId));
 
         // Act & Assert
-        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.AddColumnAsync(input, userId));
+        var act = () => _service.AddColumnAsync(input, userId);
+        await act.Should().ThrowAsync<EntityNotFoundException>();
     }
 
     [Fact]
@@ -116,10 +118,10 @@ public class ColumnServiceTests
         var result = await _service.UpdateColumnAsync(input, userId);
 
         // Assert
-        Assert.Equal(10, result.WipLimit);
+        result.WipLimit.Should().Be(10);
 
         var dbColumn = await _context.Columns.FindAsync(columnId);
-        Assert.Equal(10, dbColumn!.WipLimit);
+        dbColumn!.WipLimit.Should().Be(10);
     }
 
     [Fact]
@@ -141,7 +143,8 @@ public class ColumnServiceTests
         SetupUpdateValidatorSuccess();
 
         // Act & Assert
-        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.UpdateColumnAsync(input, userId));
+        var act = () => _service.UpdateColumnAsync(input, userId);
+        await act.Should().ThrowAsync<EntityNotFoundException>();
     }
 
     [Fact]
@@ -158,6 +161,7 @@ public class ColumnServiceTests
         SetupUpdateValidatorThrows(failures);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() => _service.UpdateColumnAsync(input, userId));
+        var act = () => _service.UpdateColumnAsync(input, userId);
+        await act.Should().ThrowAsync<ValidationException>();
     }
 }

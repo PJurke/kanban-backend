@@ -1,7 +1,8 @@
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace KanbanBackend.Tests;
@@ -17,7 +18,7 @@ public class AuthIntegrationTests : IntegrationTestBase
     {
         var client = Factory.CreateClient();
         var email = $"test_{Guid.NewGuid()}@example.com";
-        var password = "Password123!";
+        var password = TestConstants.DefaultPassword;
 
         // 1. Register
         var registerQuery = new
@@ -33,8 +34,8 @@ public class AuthIntegrationTests : IntegrationTestBase
         var registerResponse = await client.PostAsJsonAsync("/graphql", registerQuery);
         registerResponse.EnsureSuccessStatusCode();
         var registerBody = await registerResponse.Content.ReadAsStringAsync();
-        Assert.DoesNotContain("errors", registerBody.ToLower());
-
+        registerBody.ToLower().Should().NotContain("errors");
+        
         // 2. Login
         var loginQuery = new
         {
@@ -51,15 +52,15 @@ public class AuthIntegrationTests : IntegrationTestBase
         loginResponse.EnsureSuccessStatusCode();
         var loginBody = await loginResponse.Content.ReadAsStringAsync();
         
-        Assert.DoesNotContain("errors", loginBody.ToLower());
-        Assert.Contains("accessToken", loginBody);
+        loginBody.ToLower().Should().NotContain("errors");
+        loginBody.Should().Contain("accessToken");
 
         // Check Cookie
         var cookies = loginResponse.Headers.GetValues("Set-Cookie").ToList();
-        Assert.NotEmpty(cookies);
+        cookies.Should().NotBeEmpty();
         var authCookie = cookies.FirstOrDefault(c => c.StartsWith("refreshToken="));
-        Assert.NotNull(authCookie);
-        Assert.Contains("httponly", authCookie.ToLower());
+        authCookie.Should().NotBeNull();
+        authCookie?.ToLower().Should().Contain("httponly");
 
         // Extract AccessToken (optional verification)
         // Extract Refresh Cookie Value for next request
@@ -84,16 +85,16 @@ public class AuthIntegrationTests : IntegrationTestBase
         refreshResponse.EnsureSuccessStatusCode();
         var refreshBody = await refreshResponse.Content.ReadAsStringAsync();
         
-        Assert.DoesNotContain("errors", refreshBody.ToLower());
-        Assert.Contains("accessToken", refreshBody);
+        refreshBody.ToLower().Should().NotContain("errors");
+        refreshBody.Should().Contain("accessToken");
         
         // Assert New Cookie (Rotation)
         var refreshCookies = refreshResponse.Headers.GetValues("Set-Cookie").ToList();
         var newAuthCookie = refreshCookies.FirstOrDefault(c => c.StartsWith("refreshToken="));
-        Assert.NotNull(newAuthCookie);
-        var newCookieValue = Regex.Match(newAuthCookie, "refreshToken=([^;]+)").Groups[1].Value;
+        newAuthCookie.Should().NotBeNull();
+        var newCookieValue = Regex.Match(newAuthCookie!, "refreshToken=([^;]+)").Groups[1].Value;
 
-        Assert.NotEqual(cookieValue, newCookieValue); // Rotation confirmed
+        newCookieValue.Should().NotBe(cookieValue); // Rotation confirmed
 
         // 4. Logout
         var logoutClient = Factory.CreateClient();
@@ -113,6 +114,6 @@ public class AuthIntegrationTests : IntegrationTestBase
         // Assert Cookie Cleared
         var logoutCookies = logoutResponse.Headers.GetValues("Set-Cookie").ToList();
         var clearCookie = logoutCookies.FirstOrDefault(c => c.StartsWith("refreshToken=;"));
-        Assert.NotNull(clearCookie); // Should be empty/expired
+        clearCookie.Should().NotBeNull(); // Should be empty/expired
     }
 }

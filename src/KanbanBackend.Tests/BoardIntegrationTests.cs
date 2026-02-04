@@ -1,7 +1,8 @@
-using System.Net.Http.Json;
-using System.Text.Json.Nodes;
+using FluentAssertions;
 using KanbanBackend.Tests.Builders;
 using Microsoft.AspNetCore.Mvc.Testing;
+using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace KanbanBackend.Tests;
@@ -37,9 +38,9 @@ public class BoardIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.DoesNotContain("errors", body.ToLower());
-        Assert.Contains("My Board", body);
-        Assert.Contains("ownerId", body);
+        body.ToLower().Should().NotContain("errors");
+        body.Should().Contain("My Board");
+        body.Should().Contain("ownerId");
     }
 
     [Fact]
@@ -72,10 +73,10 @@ public class BoardIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.DoesNotContain("errors", body.ToLower());
-        Assert.Contains("items", body); 
-        Assert.Contains("Paginated Board", body);
-        Assert.Contains("totalCount", body);
+        body.ToLower().Should().NotContain("errors");
+        body.Should().Contain("items"); 
+        body.Should().Contain("Paginated Board");
+        body.Should().Contain("totalCount");
     }
 
     [Fact]
@@ -106,9 +107,9 @@ public class BoardIntegrationTests : IntegrationTestBase
         var bodyB = await responseB.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.DoesNotContain("errors", bodyB.ToLower());
-        Assert.DoesNotContain("User A Board", bodyB); 
-        Assert.Contains("\"totalCount\":0", bodyB); 
+        bodyB.ToLower().Should().NotContain("errors");
+        bodyB.Should().NotContain("User A Board"); 
+        bodyB.Should().Contain("\"totalCount\":0"); 
     }
 
     [Fact]
@@ -122,20 +123,20 @@ public class BoardIntegrationTests : IntegrationTestBase
         // 2. Call Delete Account
         var deleteMutation = new
         {
-            query = @"mutation { deleteAccount(password: ""Password123!"") }"
+            query = $@"mutation {{ deleteAccount(password: ""{TestConstants.DefaultPassword}"") }}"
         };
         var deleteRes = await client.PostAsJsonAsync("/graphql", deleteMutation);
         var deleteBody = await deleteRes.Content.ReadAsStringAsync();
-        Assert.DoesNotContain("errors", deleteBody.ToLower());
-        Assert.Contains("true", deleteBody.ToLower());
+        deleteBody.ToLower().Should().NotContain("errors");
+        deleteBody.ToLower().Should().Contain("true");
 
         // 3. Verify Login Fails
         var loginRes = await Factory.CreateClient().PostAsJsonAsync("/graphql", new
         {
-            query = $@"mutation {{ login(email: ""{email}"", password: ""Password123!"") {{ accessToken }} }}"
+            query = $@"mutation {{ login(email: ""{email}"", password: ""{TestConstants.DefaultPassword}"") {{ accessToken }} }}"
         });
         var loginBody = await loginRes.Content.ReadAsStringAsync();
-        Assert.Contains("AUTH_FAILED", loginBody); // Should fail
+        loginBody.Should().Contain("AUTH_FAILED");
     }
 
     [Fact]
@@ -163,8 +164,8 @@ public class BoardIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.Contains("errors", body.ToLower());
-        Assert.DoesNotContain("Hacked Column", body);
+        body.ToLower().Should().Contain("errors");
+        body.Should().NotContain("Hacked Column");
     }
 
     [Fact]
@@ -196,7 +197,7 @@ public class BoardIntegrationTests : IntegrationTestBase
         var body = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.Contains("errors", body.ToLower());
-        Assert.DoesNotContain("Hacked Card", body);
+        body.ToLower().Should().Contain("errors");
+        body.Should().NotContain("Hacked Card");
     }
 }

@@ -1,10 +1,11 @@
-using System.Net.Http.Json;
-using System.Text.Json.Nodes;
+using FluentAssertions;
 using HotChocolate.Execution;
 using KanbanBackend.API.Data;
 using KanbanBackend.Tests.Builders;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Json;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace KanbanBackend.Tests;
@@ -38,14 +39,20 @@ public class SubscriptionIntegrationTests : IntegrationTestBase
         // 3. Assert
         if (result is IResponseStream)
         {
-             Assert.True(true); 
+             // Success
         }
         else
         {
              dynamic dynamicResult = result;
-             var errors = (IEnumerable<object>)dynamicResult.Errors; // Cast to enumerable to print
-             Assert.Null(dynamicResult.Errors); // Fail with msg if needed, but Null check is standard
+             var errors = (IEnumerable<object>)dynamicResult.Errors; 
+             // errors.Should().BeNull(); // dynamic dispatch issues with FA sometimes
+             ((object)dynamicResult.Errors).Should().BeNull(); // Keep simple for dynamic or cast
         }
+        // Better FA approach for structure:
+        // result.Should().BeAssignableTo<IResponseStream>(); 
+        // But the test structure handles both.
+        // Let's rely on type check assertion.
+        result.Should().BeAssignableTo<IResponseStream>();
     }
 
     [Fact]
@@ -73,14 +80,13 @@ public class SubscriptionIntegrationTests : IntegrationTestBase
         var result = await executor.ExecuteAsync(request);
 
         // 3. Assert
-        if (result is IResponseStream)
-        {
-             Assert.Fail("Expected an error result (Access Denied), but got a successful stream.");
-        }
-        else
+        result.Should().NotBeAssignableTo<IResponseStream>("Expected an error result (Access Denied), but got a successful stream.");
+
+        if (result is not IResponseStream)
         {
              dynamic dynamicResult = result;
-             Assert.NotNull(dynamicResult.Errors);
+             // Assert.NotNull(dynamicResult.Errors);
+             // dynamicResult.Errors.Should().NotBeNull();
              
              bool accessDeniedFound = false;
              var errorList = new List<string>();
@@ -94,7 +100,7 @@ public class SubscriptionIntegrationTests : IntegrationTestBase
                      break;
                  }
              }
-             Assert.True(accessDeniedFound, $"Expected 'Access denied' or 'not found' error. Found: {string.Join(", ", errorList)}");
+             accessDeniedFound.Should().BeTrue($"Expected 'Access denied' or 'not found' error. Found: {string.Join(", ", errorList)}");
         }
     }
     

@@ -1,3 +1,4 @@
+using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
 using KanbanBackend.API.Data;
@@ -54,14 +55,15 @@ public class BoardServiceTests
         var result = await _service.AddBoardAsync(input, userId);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(input.Name, result.Name);
-        Assert.Equal(userId, result.OwnerId);
-        Assert.NotEqual(Guid.Empty, result.Id);
+        // Assert
+        result.Should().NotBeNull();
+        result.Name.Should().Be(input.Name);
+        result.OwnerId.Should().Be(userId);
+        result.Id.Should().NotBe(Guid.Empty);
 
         var dbBoard = await _context.Boards.FindAsync(result.Id);
-        Assert.NotNull(dbBoard);
-        Assert.Equal(input.Name, dbBoard.Name);
+        dbBoard.Should().NotBeNull();
+        dbBoard.Name.Should().Be(input.Name);
     }
 
     [Fact]
@@ -94,6 +96,7 @@ public class BoardServiceTests
         SetupValidatorThrows(failures);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ValidationException>(() => _service.AddBoardAsync(input, userId));
+        var act = () => _service.AddBoardAsync(input, userId);
+        await act.Should().ThrowAsync<ValidationException>();
     }
 }
