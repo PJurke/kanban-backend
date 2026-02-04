@@ -21,12 +21,10 @@ public class AuthMutations
         string password,
         [Service] IAuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
-        [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
-        [Service] IOptions<RateLimitingOptions> rateLimitingOptions)
+        [Service] IRateLimitingService rateLimitingService)
     {
         var ip = httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
-        var options = rateLimitingOptions.Value;
-        CheckRateLimit(cache, $"Register_{ip}", options.RegisterLimit, TimeSpan.FromMinutes(options.WindowMinutes));
+        rateLimitingService.CheckRegisterLimit(ip);
 
         var result = await authService.RegisterAsync(email, password);
         if (!result.Succeeded)
@@ -43,12 +41,10 @@ public class AuthMutations
         string password,
         [Service] IAuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
-        [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
-        [Service] IOptions<RateLimitingOptions> rateLimitingOptions)
+        [Service] IRateLimitingService rateLimitingService)
     {
         var ip = httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
-        var options = rateLimitingOptions.Value;
-        CheckRateLimit(cache, $"Login_{ip}", options.LoginLimit, TimeSpan.FromMinutes(options.WindowMinutes));
+        rateLimitingService.CheckLoginLimit(ip);
 
         var result = await authService.LoginAsync(email, password);
         if (result == null)
@@ -65,12 +61,10 @@ public class AuthMutations
     public async Task<AuthPayload> RefreshTokenAsync(
         [Service] IAuthService authService,
         [Service] IHttpContextAccessor httpContextAccessor,
-        [Service] Microsoft.Extensions.Caching.Memory.IMemoryCache cache,
-        [Service] IOptions<RateLimitingOptions> rateLimitingOptions)
+        [Service] IRateLimitingService rateLimitingService)
     {
         var ip = httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
-        var options = rateLimitingOptions.Value;
-        CheckRateLimit(cache, $"Refresh_{ip}", options.RefreshLimit, TimeSpan.FromMinutes(options.WindowMinutes));
+        rateLimitingService.CheckRefreshLimit(ip);
 
         var refreshToken = httpContextAccessor.HttpContext!.Request.Cookies["refreshToken"];
         if (string.IsNullOrEmpty(refreshToken))
@@ -94,22 +88,6 @@ public class AuthMutations
         var email = jwt.Claims.FirstOrDefault(c => c.Type == "email")?.Value ?? "";
 
         return new AuthPayload(result.AccessToken, new UserPayload(email));
-    }
-
-    private void CheckRateLimit(Microsoft.Extensions.Caching.Memory.IMemoryCache cache, string key, int limit, TimeSpan window)
-    {
-        var count = cache.GetOrCreate(key, entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = window;
-            return 0;
-        });
-
-        if (count >= limit)
-        {
-            throw new GraphQLException(new Error("Rate limit exceeded", "AUTH_RATE_LIMIT"));
-        }
-
-        cache.Set(key, count + 1, window);
     }
 
     public async Task<bool> LogoutAsync(

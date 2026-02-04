@@ -18,6 +18,7 @@ public class CardServiceTests
     private readonly AppDbContext _context;
     private readonly Mock<ITopicEventSender> _eventSenderMock;
     private readonly Mock<IRankRebalancingService> _rebalancingServiceMock;
+    private readonly Mock<IPermissionService> _permissionServiceMock;
     private readonly CardService _cardService;
     private readonly string _dummyVersion = Convert.ToBase64String(BitConverter.GetBytes(1u));
 
@@ -30,10 +31,11 @@ public class CardServiceTests
         _context = new AppDbContext(options);
         _eventSenderMock = new Mock<ITopicEventSender>();
         _rebalancingServiceMock = new Mock<IRankRebalancingService>();
+        _permissionServiceMock = new Mock<IPermissionService>();
 
         var validatorMock = new Mock<IValidator<AddCardInput>>();
 
-        _cardService = new CardService(_context, _eventSenderMock.Object, _rebalancingServiceMock.Object, validatorMock.Object);
+        _cardService = new CardService(_context, _eventSenderMock.Object, _rebalancingServiceMock.Object, validatorMock.Object, _permissionServiceMock.Object);
     }
 
     [Fact]

@@ -15,30 +15,26 @@ public class CardService : ICardService
     private readonly ITopicEventSender _eventSender;
     private readonly IRankRebalancingService _rebalancingService;
     private readonly IValidator<AddCardInput> _addCardValidator;
+    private readonly IPermissionService _permissionService;
 
     public CardService(
         AppDbContext context,
         ITopicEventSender eventSender,
         IRankRebalancingService rebalancingService,
-        IValidator<AddCardInput> addCardValidator)
+        IValidator<AddCardInput> addCardValidator,
+        IPermissionService permissionService)
     {
         _context = context;
         _eventSender = eventSender;
         _rebalancingService = rebalancingService;
         _addCardValidator = addCardValidator;
+        _permissionService = permissionService;
     }
 
     public async Task<Card> AddCardAsync(AddCardInput input, string userId)
     {
         await _addCardValidator.ValidateAndThrowAsync(input);
-
-        var columnExists = await _context.Columns
-            .AnyAsync(c => c.Id == input.ColumnId && c.Board != null && c.Board.OwnerId == userId);
-
-        if (!columnExists)
-        {
-            throw new EntityNotFoundException("Column", input.ColumnId);
-        }
+        await _permissionService.EnsureColumnBelongsToUserBoardAsync(input.ColumnId, userId);
 
         var card = new Card
         {

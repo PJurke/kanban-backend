@@ -64,6 +64,12 @@ public class GraphQLErrorFilter : IErrorFilter
                          .WithMessage("Card was modified by another operation. Please reload.");
         }
 
+        if (error.Exception is RateLimitExceededException)
+        {
+            return error.WithCode("AUTH_RATE_LIMIT")
+                        .WithMessage(error.Exception.Message);
+        }
+
         if (error.Exception != null)
         {
             // Unhandled exception

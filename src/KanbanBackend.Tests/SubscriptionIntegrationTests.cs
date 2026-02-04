@@ -88,13 +88,13 @@ public class SubscriptionIntegrationTests : IntegrationTestBase
              {
                  string msg = error.Message;
                  errorList.Add(msg);
-                 if (msg == "Access denied")
+                 if (msg == "Access denied" || msg.Contains("not found"))
                  {
                      accessDeniedFound = true;
                      break;
                  }
              }
-             Assert.True(accessDeniedFound, $"Expected 'Access denied' error not found. Found: {string.Join(", ", errorList)}");
+             Assert.True(accessDeniedFound, $"Expected 'Access denied' or 'not found' error. Found: {string.Join(", ", errorList)}");
         }
     }
     

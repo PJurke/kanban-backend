@@ -12,25 +12,24 @@ public class ColumnService : IColumnService
     private readonly AppDbContext _context;
     private readonly IValidator<AddColumnInput> _addValidator;
     private readonly IValidator<UpdateColumnInput> _updateValidator;
+    private readonly IPermissionService _permissionService;
 
     public ColumnService(
         AppDbContext context,
         IValidator<AddColumnInput> addValidator,
-        IValidator<UpdateColumnInput> updateValidator)
+        IValidator<UpdateColumnInput> updateValidator,
+        IPermissionService permissionService)
     {
         _context = context;
         _addValidator = addValidator;
         _updateValidator = updateValidator;
+        _permissionService = permissionService;
     }
 
     public async Task<Column> AddColumnAsync(AddColumnInput input, string userId)
     {
         await _addValidator.ValidateAndThrowAsync(input);
-
-        if (!await _context.Boards.AnyAsync(b => b.Id == input.BoardId && b.OwnerId == userId))
-        {
-            throw new EntityNotFoundException("Board", input.BoardId);
-        }
+        await _permissionService.EnsureBoardOwnershipAsync(input.BoardId, userId);
 
         var column = new Column
         {

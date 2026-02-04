@@ -16,6 +16,7 @@ public class ColumnServiceTests
     private readonly AppDbContext _context;
     private readonly Mock<IValidator<AddColumnInput>> _addValidatorMock;
     private readonly Mock<IValidator<UpdateColumnInput>> _updateValidatorMock;
+    private readonly Mock<IPermissionService> _permissionServiceMock;
     private readonly ColumnService _service;
 
     public ColumnServiceTests()
@@ -26,8 +27,9 @@ public class ColumnServiceTests
         _context = new AppDbContext(options);
         _addValidatorMock = new Mock<IValidator<AddColumnInput>>();
         _updateValidatorMock = new Mock<IValidator<UpdateColumnInput>>();
+        _permissionServiceMock = new Mock<IPermissionService>();
 
-        _service = new ColumnService(_context, _addValidatorMock.Object, _updateValidatorMock.Object);
+        _service = new ColumnService(_context, _addValidatorMock.Object, _updateValidatorMock.Object, _permissionServiceMock.Object);
     }
 
     private void SetupAddValidatorSuccess()
@@ -86,6 +88,8 @@ public class ColumnServiceTests
         var input = new AddColumnInput(Guid.NewGuid(), "Todo", 0);
 
         SetupAddValidatorSuccess();
+        _permissionServiceMock.Setup(x => x.EnsureBoardOwnershipAsync(input.BoardId, userId))
+            .ThrowsAsync(new EntityNotFoundException("Board", input.BoardId));
 
         // Act & Assert
         await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.AddColumnAsync(input, userId));
