@@ -26,15 +26,29 @@ public class BoardServiceTests
         _service = new BoardService(_context, _validatorMock.Object);
     }
 
+    private void SetupValidatorSuccess()
+    {
+        _validatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<IValidationContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+    }
+
+    private void SetupValidatorThrows(List<ValidationFailure> failures)
+    {
+        // ValidateAndThrowAsync sets ThrowOnFailures=true internally, so the validator
+        // throws directly instead of returning an invalid result
+        _validatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<IValidationContext>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ValidationException(failures));
+    }
+
     [Fact]
     public async Task AddBoardAsync_Should_CreateBoard_When_InputIsValid()
     {
         // Arrange
         var userId = "user-123";
         var input = new AddBoardInput("New Board");
-
-        _validatorMock.Setup(v => v.ValidateAsync(input, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ValidationResult()); // Valid result
+        SetupValidatorSuccess();
 
         // Act
         var result = await _service.AddBoardAsync(input, userId);
@@ -56,15 +70,15 @@ public class BoardServiceTests
         // Arrange
         var userId = "user-123";
         var input = new AddBoardInput("New Board");
-
-        _validatorMock.Setup(v => v.ValidateAsync(input, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ValidationResult());
+        SetupValidatorSuccess();
 
         // Act
         await _service.AddBoardAsync(input, userId);
 
-        // Assert
-        _validatorMock.Verify(v => v.ValidateAsync(input, It.IsAny<CancellationToken>()), Times.Once);
+        // Assert - verify that validation was called
+        _validatorMock.Verify(v => v.ValidateAsync(
+            It.Is<ValidationContext<AddBoardInput>>(ctx => ctx.InstanceToValidate == input),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -77,10 +91,7 @@ public class BoardServiceTests
         {
             new("Name", "Board name is required.")
         };
-
-        _validatorMock
-            .Setup(v => v.ValidateAsync(input, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ValidationResult(failures));
+        SetupValidatorThrows(failures);
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() => _service.AddBoardAsync(input, userId));

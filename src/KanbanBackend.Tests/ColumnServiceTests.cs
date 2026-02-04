@@ -26,8 +26,31 @@ public class ColumnServiceTests
         _context = new AppDbContext(options);
         _addValidatorMock = new Mock<IValidator<AddColumnInput>>();
         _updateValidatorMock = new Mock<IValidator<UpdateColumnInput>>();
-        
+
         _service = new ColumnService(_context, _addValidatorMock.Object, _updateValidatorMock.Object);
+    }
+
+    private void SetupAddValidatorSuccess()
+    {
+        _addValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<IValidationContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+    }
+
+    private void SetupUpdateValidatorSuccess()
+    {
+        _updateValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<IValidationContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ValidationResult());
+    }
+
+    private void SetupUpdateValidatorThrows(List<ValidationFailure> failures)
+    {
+        // ValidateAndThrowAsync sets ThrowOnFailures=true internally, so the validator
+        // throws directly instead of returning an invalid result
+        _updateValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<IValidationContext>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ValidationException(failures));
     }
 
     [Fact]
@@ -41,8 +64,7 @@ public class ColumnServiceTests
         _context.Boards.Add(new Board { Id = boardId, OwnerId = userId, Name = "Test Board" });
         await _context.SaveChangesAsync();
 
-        _addValidatorMock.Setup(v => v.ValidateAsync(input, It.IsAny<CancellationToken>()))
-             .ReturnsAsync(new ValidationResult());
+        SetupAddValidatorSuccess();
 
         // Act
         var result = await _service.AddColumnAsync(input, userId);
@@ -59,17 +81,15 @@ public class ColumnServiceTests
     [Fact]
     public async Task AddColumnAsync_Should_ThrowEntityNotFound_When_BoardDoesNotExist()
     {
-         // Arrange
+        // Arrange
         var userId = "user-123";
         var input = new AddColumnInput(Guid.NewGuid(), "Todo", 0);
 
-        _addValidatorMock.Setup(v => v.ValidateAsync(input, It.IsAny<CancellationToken>()))
-             .ReturnsAsync(new ValidationResult());
+        SetupAddValidatorSuccess();
 
         // Act & Assert
         await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.AddColumnAsync(input, userId));
     }
-
 
     [Fact]
     public async Task UpdateColumnAsync_Should_UpdateWipLimit_When_Provided()
@@ -78,7 +98,7 @@ public class ColumnServiceTests
         var userId = "user-123";
         var columnId = Guid.NewGuid();
         var boardId = Guid.NewGuid();
-        
+
         // Seed Board & Column
         _context.Boards.Add(new Board { Id = boardId, OwnerId = userId, Name = "Test Board" });
         _context.Columns.Add(new Column { Id = columnId, BoardId = boardId, Name = "Todo", Order = 0, WipLimit = 5 });
@@ -86,15 +106,14 @@ public class ColumnServiceTests
 
         var input = new UpdateColumnInput(columnId, 10); // Update WIP to 10
 
-        _updateValidatorMock.Setup(v => v.ValidateAsync(input, It.IsAny<CancellationToken>()))
-             .ReturnsAsync(new ValidationResult());
+        SetupUpdateValidatorSuccess();
 
         // Act
         var result = await _service.UpdateColumnAsync(input, userId);
 
         // Assert
         Assert.Equal(10, result.WipLimit);
-        
+
         var dbColumn = await _context.Columns.FindAsync(columnId);
         Assert.Equal(10, dbColumn!.WipLimit);
     }
@@ -102,12 +121,12 @@ public class ColumnServiceTests
     [Fact]
     public async Task UpdateColumnAsync_Should_ThrowEntityNotFound_When_NotOwner()
     {
-         // Arrange
+        // Arrange
         var userId = "user-123";
         var otherUser = "other-user";
         var columnId = Guid.NewGuid();
         var boardId = Guid.NewGuid();
-        
+
         // Seed Board owned by OTHER user
         _context.Boards.Add(new Board { Id = boardId, OwnerId = otherUser, Name = "Other Board" });
         _context.Columns.Add(new Column { Id = columnId, BoardId = boardId, Name = "Todo", Order = 0 });
@@ -115,8 +134,7 @@ public class ColumnServiceTests
 
         var input = new UpdateColumnInput(columnId, null);
 
-         _updateValidatorMock.Setup(v => v.ValidateAsync(input, It.IsAny<CancellationToken>()))
-             .ReturnsAsync(new ValidationResult());
+        SetupUpdateValidatorSuccess();
 
         // Act & Assert
         await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.UpdateColumnAsync(input, userId));
@@ -133,9 +151,7 @@ public class ColumnServiceTests
             new("WipLimit", "WIP limit must be greater than 0.")
         };
 
-        _updateValidatorMock
-            .Setup(v => v.ValidateAsync(input, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ValidationResult(failures));
+        SetupUpdateValidatorThrows(failures);
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() => _service.UpdateColumnAsync(input, userId));
